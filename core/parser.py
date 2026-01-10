@@ -14,6 +14,7 @@ class HelloAssoParser:
             "first_name": parser._extract_identity(content)['first_name'],
             "last_name": parser._extract_identity(content)['last_name'],
             "email": parser._extract_member_email(content),
+            'phone': parser._extract_phone(content),
             "has_plot": parser._extract_has_plot(content),
             "membership_type": parser._extract_membership_type(content)
         }
@@ -71,6 +72,12 @@ class HelloAssoParser:
             if "helloasso" not in email.lower() and "toitsvivants" not in email.lower():
                 return email.strip()
         return "non-trouve@test.com"
+    
+    @staticmethod
+    def _extract_phone(content):
+        # A tester à partir du nouveau formulaire AlloAsso
+        match = re.search(r"Tél[:\s]+([\d\s.+-]{6,})", content)
+        return match.group(1).strip() if match else ""
 
     @staticmethod
     def _extract_has_plot(content):
