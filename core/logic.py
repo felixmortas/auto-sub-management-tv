@@ -1,9 +1,10 @@
 from datetime import datetime
 
 class EnrollmentLogic:
-    def __init__(self, excel_manager, whatsapp_service):
+    def __init__(self, excel_manager, whatsapp_service=None, outlook_service=None):
         self.excel = excel_manager
         self.whatsapp_service = whatsapp_service
+        self.outlook_service = outlook_service
 
     def process(self, member_data):
         year = member_data['year']
@@ -72,16 +73,24 @@ class EnrollmentLogic:
         
         self.excel.add_new_row(year, new_row)
         
-        # 3. Notification WhatsApp
-        if plot_number and (not old_data or not old_data[5]):
-            # format phone number to french using 33 prefix
-            phone = member_data['phone']
-            if phone.startswith("0"):
-                phone = "33" + phone[1:]
-            elif phone.startswith("+"):
-                phone = phone[1:]
-            self.whatsapp_service.send_plot_notification(
-                phone,
-                first_name,
-                plot_number
-            )
+        # 3. Notification
+        if self.whatsapp_service:
+            if plot_number and (not old_data or not old_data[5]):
+                # format phone number to french using 33 prefix
+                phone = member_data['phone']
+                if phone.startswith("0"):
+                    phone = "33" + phone[1:]
+                elif phone.startswith("+"):
+                    phone = phone[1:]
+                self.whatsapp_service.send_plot_notification(
+                    phone,
+                    first_name,
+                    plot_number
+                )
+        elif self.outlook_service:
+            if plot_number and (not old_data or not old_data[5]):
+                self.outlook_service.send_plot_notification(
+                    member_data['email'], # Utilise l'email
+                    first_name,
+                    plot_number
+                )

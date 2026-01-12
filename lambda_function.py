@@ -5,6 +5,7 @@ from core.parser import HelloAssoParser
 from core.logic import EnrollmentLogic
 from services.excel_manager import ExcelManager
 from services.whatsapp_service import WhatsAppService
+from services.outlook_service import OutlookService
 
 from dotenv import load_dotenv # test pour le dev local
 load_dotenv() # test pour le dev local
@@ -38,9 +39,16 @@ def lambda_handler(event, context):
         whatsapp_token = os.environ["WHATSAPP_TOKEN"]
         phone_number_id = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
         whatsapp_service = WhatsAppService(whatsapp_token, phone_number_id)
+
+        # 5. Initialisation du service Outlook
+        outlook_service = OutlookService(
+            client_id=os.environ["OUTLOOK_CLIENT_ID"],
+            client_secret=os.environ["OUTLOOK_CLIENT_SECRET"],
+            refresh_token=os.environ["OUTLOOK_REFRESH_TOKEN"]
+        )
         
-        # 5. Exécution de la logique métier
-        logic = EnrollmentLogic(excel_mgr, whatsapp_service)
+        # 6. Exécution de la logique métier
+        logic = EnrollmentLogic(excel_mgr, outlook_service=outlook_service)
         logic.process(parsed_data)
 
         return {
