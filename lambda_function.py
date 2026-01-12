@@ -4,6 +4,10 @@ import os
 from core.parser import HelloAssoParser
 from core.logic import EnrollmentLogic
 from services.excel_manager import ExcelManager
+from services.whatsapp_service import WhatsAppService
+
+from dotenv import load_dotenv # test pour le dev local
+load_dotenv() # test pour le dev local
 
 def lambda_handler(event, context):
     try:
@@ -29,9 +33,14 @@ def lambda_handler(event, context):
         spreadsheet_id = "15OLd9RvqXzllTTzuNCnHvkfjuzjyYpWfo35nvgfZ63A"
         
         excel_mgr = ExcelManager(spreadsheet_id, creds_json)
+
+        # 4. Initialisation du service WhatsApp
+        whatsapp_token = os.environ["WHATSAPP_TOKEN"]
+        phone_number_id = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
+        whatsapp_service = WhatsAppService(whatsapp_token, phone_number_id)
         
-        # 4. Exécution de la logique métier
-        logic = EnrollmentLogic(excel_mgr)
+        # 5. Exécution de la logique métier
+        logic = EnrollmentLogic(excel_mgr, whatsapp_service)
         logic.process(parsed_data)
 
         return {

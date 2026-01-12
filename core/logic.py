@@ -1,8 +1,9 @@
 from datetime import datetime
 
 class EnrollmentLogic:
-    def __init__(self, excel_manager):
+    def __init__(self, excel_manager, whatsapp_service):
         self.excel = excel_manager
+        self.whatsapp_service = whatsapp_service
 
     def process(self, member_data):
         year = member_data['year']
@@ -55,21 +56,32 @@ class EnrollmentLogic:
         # 2. Préparation de la ligne finale (format selon vos colonnes)
         # Nom, Prénom, Type, Membres, Date Adh, Num Parcelle, Date Attr, Attente, Tél1, Tél2, Mail1, Mail2
         new_row = [
-            member_data['last_name'],
-            member_data['first_name'],
+            last_name,
+            first_name,
             member_data['membership_type'],
             "", # Membres si familiale (à remplir manuellement ou parser)
             member_data['date'],
             plot_number,
             attribution_date,
             "", # En attente
-            "", "", # Téléphones
+            member_data['phone'], 
+            "", # Téléphones
             member_data['email'],
             ""  # Mail 2
         ]
         
         self.excel.add_new_row(year, new_row)
         
-        # 3. Notification (Fake WhatsApp)
+        # 3. Notification WhatsApp
         if plot_number and (not old_data or not old_data[5]):
-            print(f"WHATSAPP: Bonjour {full_name}, votre parcelle est la n°{plot_number}")
+            # format phone number to french using 33 prefix
+            phone = member_data['phone']
+            if phone.startswith("0"):
+                phone = "33" + phone[1:]
+            elif phone.startswith("+"):
+                phone = phone[1:]
+            self.whatsapp_service.send_plot_notification(
+                phone,
+                first_name,
+                plot_number
+            )
