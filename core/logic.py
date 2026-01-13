@@ -94,3 +94,8 @@ class EnrollmentLogic:
                     first_name,
                     plot_number
                 )
+            elif not plot_number and not old_data:
+                self.outlook_service.send_new_sub_notification(
+                    member_data['email'], # Utilise l'email
+                    first_name
+                )
