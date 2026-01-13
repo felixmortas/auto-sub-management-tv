@@ -13,6 +13,9 @@ from services.outlook_service import OutlookService
 
 def lambda_handler(event, context):
     try:
+        if event.get('headers', {}).get('make-trigger-api-key') != os.environ['MAKE_TRIGGER_API_KEY']:
+            return {'statusCode': 403, 'body': 'Mauvaise clé API depuis Make.com'}
+    
         # 1. Récupération des données envoyées par Power Automate
         # Si Power Automate envoie le contenu brut dans 'body'
         email_body = event.get('body', "")
