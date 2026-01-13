@@ -7,8 +7,9 @@ from services.excel_manager import ExcelManager
 from services.whatsapp_service import WhatsAppService
 from services.outlook_service import OutlookService
 
-from dotenv import load_dotenv # test pour le dev local
-load_dotenv() # test pour le dev local
+# DEV LOCAL : chargement des variables d'environnement
+# from dotenv import load_dotenv
+# load_dotenv() 
 
 def lambda_handler(event, context):
     try:
@@ -23,22 +24,21 @@ def lambda_handler(event, context):
         print(f"DEBUG - Données extraites : {parsed_data}")
 
         # 3. Initialisation du gestionnaire Excel
-        # On peut stocker le JSON du service account dans une var d'env pour plus de sécurité
-        # creds_json = json.loads(os.environ['GOOGLE_CREDS']) # Alternative sécurisée pour prod
+        creds_json = json.loads(os.environ['GOOGLE_CREDS']) # Alternative sécurisée pour prod
 
-        # Alternative locale pour le dev
-        creds_path = 'auto-sub-management-tv-cf8b4c7b9ab7.json'
-        with open(creds_path, 'r') as f:
-            creds_json = json.load(f)
+        # DEV LOCAL : chargement des credentials depuis un fichier JSON
+        # creds_path = 'auto-sub-management-tv-cf8b4c7b9ab7.json'
+        # with open(creds_path, 'r') as f:
+        #     creds_json = json.load(f)
 
         spreadsheet_id = "15OLd9RvqXzllTTzuNCnHvkfjuzjyYpWfo35nvgfZ63A"
         
         excel_mgr = ExcelManager(spreadsheet_id, creds_json)
 
         # 4. Initialisation du service WhatsApp
-        whatsapp_token = os.environ["WHATSAPP_TOKEN"]
-        phone_number_id = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
-        whatsapp_service = WhatsAppService(whatsapp_token, phone_number_id)
+        # whatsapp_token = os.environ["WHATSAPP_TOKEN"]
+        # phone_number_id = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
+        # whatsapp_service = WhatsAppService(whatsapp_token, phone_number_id)
 
         # 5. Initialisation du service Outlook
         outlook_service = OutlookService(
