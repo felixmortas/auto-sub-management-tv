@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouveau paiement - HelloAsso</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7f9; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
+        .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+        .content { padding: 30px; }
+        .badge { background-color: #e8f5e9; color: #2e7d32; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; display: inline-block; margin-bottom: 15px; }
+        h1 { color: #1a1a1a; font-size: 22px; margin-top: 0; }
+        .summary-box { background-color: #fafafa; border: 1px solid #eeeeee; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eeeeee; }
+        .item-row:last-child { border-bottom: none; }
+        .total-row { display: flex; justify-content: space-between; padding: 15px 0; font-weight: bold; font-size: 18px; color: #000; }
+        .btn { display: inline-block; background-color: #38b2ac; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
+        .footer { background-color: #f4f7f9; padding: 20px; text-align: center; font-size: 12px; color: #777; }
+        .info-box { background-color: #fff9db; padding: 15px; border-radius: 8px; font-size: 14px; margin-top: 20px; border-left: 4px solid #fcc419; }
+        .sidebar-content { border-top: 1px solid #eeeeee; margin-top: 30px; padding-top: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://mon-compte.helloasso.com/images/logos/logo-helloasso-couleur.png" alt="HelloAsso" width="150">
+        </div>
+
+        <div class="content">
+            <span class="badge">Adhésion</span>
+            <h1>Vous avez un nouveau membre !</h1>
+            <p>Bonjour <strong>Sébastien</strong>,</p>
+            <p>Un nouveau paiement a été effectué sur votre formulaire d'adhésion <strong>"Adhésion association Toits Vivants 2026"</strong>. Comme toujours, il vous sera versé sans frais ni commission.</p>
+
+            <div class="summary-box">
+                <p style="margin-top:0; color:#888; font-size:12px; text-transform:uppercase;">Détails de la transaction</p>
+                <div style="margin-bottom: 15px;">
+                    <strong>Adhérent :</strong> Félix Mortas<br>
+                    <strong>Email :</strong> felix.mortas@hotmail.fr<br>
+                    <strong>Tél :</strong> 07 79 80 61 47
+                </div>
+                
+                <div class="item-row">
+                    <span>1 x Adhésion Individuelle</span>
+                    <span>20,00 €</span>
+                </div>
+                <div class="item-row">
+                    <span>1 x Mise à disposition d'une parcelle</span>
+                    <span>30,00 €</span>
+                </div>
+                <div class="item-row">
+                    <span>Don supplémentaire</span>
+                    <span>20,00 €</span>
+                </div>
+                <div class="total-row">
+                    <span>Total reçu</span>
+                    <span>70,00 €</span>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="#" class="btn">Suivre mes adhésions</a>
+            </div>
+
+            <div class="info-box">
+                💡 Retrouvez l'intégralité des informations concernant votre formulaire d'adhésion dans l'espace <strong>Mes Adhésions > Administrer > Modifier</strong>.
+            </div>
+
+            <div class="sidebar-content">
+                <h3 style="color:#2e7d32;">Aidez HelloAsso à rester gratuite !</h3>
+                <p>Notre modèle solidaire permet de bénéficier gratuitement de nos services grâce au soutien des contributeurs. Aidez-nous en expliquant à vos payeurs comment laisser une contribution volontaire.</p>
+                <a href="#" style="color:#38b2ac; font-weight:bold; text-decoration:none;">Parler du modèle autour de moi →</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>BESOIN D'AIDE ?</strong><br>
+            Consultez notre <a href="#">centre d'aide</a> ou contactez nos équipes via le formulaire.</p>
+            <hr style="border:none; border-top:1px solid #e0e0e0; margin: 20px 0;">
+            <p>Vous recevez cet e-mail car vous êtes administrateur de l'association <strong>Toits Vivants</strong>.</p>
+            <p>© 2026 HelloAsso, l'engagement tout simplement<br>
+            Cité Numérique, 2 rue Marc Sangnier, 33130 Bègles</p>
+        </div>
+    </div>
+</body>
+</html>
