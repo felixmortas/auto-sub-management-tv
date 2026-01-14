@@ -2,6 +2,9 @@ import os
 import json
 from core.parser import HelloAssoParser
 
+from dotenv import load_dotenv
+load_dotenv()  # Charger les variables d'environnement depuis un fichier .env
+
 def run_tests():
     # Chemins des fichiers
     test_files = {
@@ -9,6 +12,8 @@ def run_tests():
         "HTML": "tests/data/email_test.html",
         "JSON": "tests/data/email_test.json"
     }
+
+    api_key = os.environ["MISTRAL_API_KEY"]
 
     print("=== DÉBUT DES TESTS DE ROBUSTESSE PARSER LLM ===")
     
@@ -22,7 +27,7 @@ def run_tests():
 
             # 2. Appel du parser LLM
             # (Assurez-vous que votre variable d'env MISTRAL_API_KEY est chargée)
-            result = HelloAssoParser.parse_email(content)
+            result = HelloAssoParser.parse_email(content, api_key)
 
             # 3. Validation des données critiques
             assert result['first_name'] == "Félix", f"Prénom incorrect pour {format_type}"
