@@ -4,7 +4,7 @@ from lambda_function import lambda_handler
 
 def simulate_lambda():
     # 1. Charger le contenu du fichier texte
-    file_path = 'email_test.txt'
+    file_path = 'tests/data/email_test.txt'
     
     if not os.path.exists(file_path):
         print(f"Erreur : Le fichier {file_path} est introuvable.")

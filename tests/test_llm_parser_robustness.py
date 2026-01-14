@@ -5,9 +5,9 @@ from core.parser import HelloAssoParser
 def run_tests():
     # Chemins des fichiers
     test_files = {
-        "TXT": "email_test.txt",
-        "HTML": "email_test.html",
-        "JSON": "email_test.json"
+        "TXT": "tests/data/email_test.txt",
+        "HTML": "tests/data/email_test.html",
+        "JSON": "tests/data/email_test.json"
     }
 
     print("=== DÉBUT DES TESTS DE ROBUSTESSE PARSER LLM ===")
