@@ -23,7 +23,8 @@ def lambda_handler(event, context):
             return {'statusCode': 400, 'body': 'Corps de l\'email manquant'}
 
         # 2. Parsing de l'email
-        parsed_data = HelloAssoParser.parse_email(email_body)
+        mistral_key = os.environ["MISTRAL_API_KEY"]
+        parsed_data = HelloAssoParser.parse_email(email_body, mistral_key)
         print(f"DEBUG - Données extraites : {parsed_data}")
 
         # 3. Initialisation du gestionnaire Excel
