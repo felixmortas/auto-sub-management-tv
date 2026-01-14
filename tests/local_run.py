@@ -2,6 +2,9 @@ import json
 import os
 from lambda_function import lambda_handler
 
+from dotenv import load_dotenv
+load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
+
 def simulate_lambda():
     # 1. Charger le contenu du fichier texte
     file_path = 'tests/data/email_test.txt'
@@ -16,6 +19,9 @@ def simulate_lambda():
     # 2. Simuler l'objet 'event' que Power Automate enverrait à AWS
     # Power Automate envoie généralement le corps du mail dans un champ 'body'
     mock_event = {
+        "headers": {
+            "make-trigger-api-key": os.environ['MAKE_TRIGGER_API_KEY']
+        },
         "body": email_content
     }
 
