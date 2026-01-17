@@ -14,11 +14,11 @@ class EnrollmentLogic:
         attribution_date = ""
 
         # 0. Chercher si l'adhérent existe déjà dans l'année actuelle pour éviter les doublons
-        if self.excel.find_member_in_sheet(member_data['payer_email'], year):
+        if self.excel.find_member_in_sheet(member_data['email'], year):
             return  # Adhérent déjà enregistré cette année
         
         # 1. Chercher dans l'année précédente
-        old_data = self.excel.find_member_in_sheet(member_data['payer_email'], last_year)
+        old_data = self.excel.find_member_in_sheet(member_data['email'], last_year)
                 
         if old_data:
             # L'adhérent existe déjà : récupérer toutes ces infos dans la feuille de l'année précédente
@@ -71,7 +71,7 @@ class EnrollmentLogic:
             members = member_data['members'] if membership_type == "Familiale" else ""
             phone_1 = ""
             phone_2 = ""
-            email_1 = member_data['payer_email']
+            email_1 = member_data['email']
             email_2 = ""
 
             if member_data['has_plot']:
@@ -112,12 +112,12 @@ class EnrollmentLogic:
         elif self.outlook_service:
             if plot_number and (not old_data or not old_data[5]):
                 self.outlook_service.send_plot_notification(
-                    member_data['payer_email'], # Utilise l'email
+                    member_data['email'], # Utilise l'email
                     first_name,
                     plot_number
                 )
             elif not plot_number and not old_data:
                 self.outlook_service.send_new_sub_notification(
-                    member_data['payer_email'], # Utilise l'email
+                    member_data['email'], # Utilise l'email
                     first_name
                 )

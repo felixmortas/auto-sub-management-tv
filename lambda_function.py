@@ -22,10 +22,8 @@ def lambda_handler(event, context):
         if not email_body:
             return {'statusCode': 400, 'body': 'Corps de l\'email manquant'}
 
-        # 2. Parsing de l'email
+        # 2. Initialisation de l'API Mistral pour le parsing
         mistral_key = os.environ["MISTRAL_API_KEY"]
-        parsed_data = HelloAssoParser.parse_email(email_body, mistral_key)
-        print(f"DEBUG - Données extraites : {parsed_data}")
 
         # 3. Initialisation du gestionnaire Excel
         creds_json = json.loads(os.environ['GOOGLE_CREDS']) # Alternative sécurisée pour prod
@@ -51,12 +49,16 @@ def lambda_handler(event, context):
         )
         
         # 6. Exécution de la logique métier
+        parsed_data = HelloAssoParser.parse_email(email_body, mistral_key)
+        print(f"DEBUG - Données extraites : {parsed_data}")
+
         logic = EnrollmentLogic(excel_mgr, outlook_service=outlook_service)
-        logic.process(parsed_data)
+        for item in parsed_data:
+            logic.process(item)
 
         return {
             'statusCode': 200,
-            'body': json.dumps(f"Adhésion de {parsed_data['first_name']} traitée avec succès.")
+            'body': json.dumps([f"Adhésion de {item['first_name']} traitée avec succès." for item in parsed_data])
         }
 
     except Exception as e:
