@@ -71,7 +71,7 @@ class EnrollmentLogic:
             members = member_data['members'] if membership_type == "Familiale" else ""
             phone_1 = ""
             phone_2 = ""
-            email_1 = ""
+            email_1 = member_data['payer_email']
             email_2 = ""
 
             if member_data['has_plot']:
