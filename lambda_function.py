@@ -31,8 +31,7 @@ def lambda_handler(event, context):
         creds_json = json.loads(os.environ['GOOGLE_CREDS']) # Alternative sécurisée pour prod
 
         # DEV LOCAL : chargement des credentials depuis un fichier JSON
-        # creds_path = 'auto-sub-management-tv-cf8b4c7b9ab7.json'
-        # with open(creds_path, 'r') as f:
+        # with open('auto-sub-management-tv-cf8b4c7b9ab7.json', 'r') as f:
         #     creds_json = json.load(f)
 
         spreadsheet_id = "15OLd9RvqXzllTTzuNCnHvkfjuzjyYpWfo35nvgfZ63A"
