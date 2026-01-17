@@ -6,12 +6,16 @@ class ExcelManager:
         gc = gspread.service_account_from_dict(credentials_dict)
         self.sh = gc.open_by_key(spreadsheet_id)
 
-    def find_member_in_sheet(self, email, sheet_name):
+    def find_member_in_sheet(self, sheet_name, email=None, last_name=None):
         """Cherche un adhérent par son mail dans une feuille précise."""
         try:
             worksheet = self.sh.worksheet(sheet_name)
-            # On suppose que Mail 1 est à la colonne 11 (K)
-            cell = worksheet.find(email, in_column=11)
+            if email:
+                # On suppose que Mail 1 est à la colonne 11 (K)
+                cell = worksheet.find(email, in_column=11)
+            elif last_name:
+                # On suppose que Nom de famille est à la colonne 1 (A)
+                cell = worksheet.find(last_name, in_column=1)
             if cell:
                 return worksheet.row_values(cell.row)
             return None
@@ -20,6 +24,20 @@ class ExcelManager:
         except Exception as e:
             print(f"⚠️ Recherche impossible dans '{sheet_name}': {e}")
             return None
+        
+    def list_members_in_sheet(self, sheet_name):
+        """Retourne une liste des noms complets des membres dans une feuille."""
+        try:
+            worksheet = self.sh.worksheet(sheet_name)
+            data = worksheet.get_all_records()
+
+            names = [f"{row['Prénom']} {row['Nom']}" for row in data]
+            return names
+        except gspread.WorksheetNotFound:
+            return ""
+        except Exception as e:
+            print(f"⚠️ Impossible de lister les membres dans '{sheet_name}': {e}")
+            return ""
 
     def get_free_plot(self):
         """Trouve la première parcelle sans occupant."""

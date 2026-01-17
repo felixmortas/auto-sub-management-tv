@@ -1,4 +1,9 @@
-from datetime import datetime
+import os
+from core.judge import Judge
+
+# DEV LOCAL
+# from dotenv import load_dotenv
+# load_dotenv()
 
 class EnrollmentLogic:
     def __init__(self, excel_manager, whatsapp_service=None, outlook_service=None):
@@ -13,12 +18,17 @@ class EnrollmentLogic:
         plot_number = ""
         attribution_date = ""
 
-        # 0. Chercher si l'adhérent existe déjà dans l'année actuelle pour éviter les doublons
-        if self.excel.find_member_in_sheet(member_data['email'], year):
-            return  # Adhérent déjà enregistré cette année
-        
         # 1. Chercher dans l'année précédente
-        old_data = self.excel.find_member_in_sheet(member_data['email'], last_year)
+        if member_data['email'] != "":            
+            old_data = self.excel.find_member_in_sheet(last_year, email=member_data['email'])
+        
+        else:
+            full_name = f"{member_data['first_name']} {member_data['last_name']}"
+            members_names = self.excel.list_members_in_sheet(last_year)
+            judge_response = Judge.check_names(full_name, members_names, api_key=os.environ["MISTRAL_API_KEY"])
+            if judge_response.get('similarity_found'):
+                last_name = judge_response.get('last_name')
+                old_data = self.excel.find_member_in_sheet(last_year, last_name=last_name)
                 
         if old_data:
             # L'adhérent existe déjà : récupérer toutes ces infos dans la feuille de l'année précédente
@@ -110,14 +120,14 @@ class EnrollmentLogic:
                         plot_number
                     )
         elif self.outlook_service:
-            if plot_number and (not old_data or not old_data[5]):
+            if plot_number and (not old_data or not old_data[5]) and email_1 != "":
                 self.outlook_service.send_plot_notification(
-                    member_data['email'], # Utilise l'email
+                    email_1, # Utilise l'email
                     first_name,
                     plot_number
                 )
-            elif not plot_number and not old_data:
+            elif not plot_number and not old_data and email_1 != "":
                 self.outlook_service.send_new_sub_notification(
-                    member_data['email'], # Utilise l'email
+                    email_1, # Utilise l'email
                     first_name
                 )
