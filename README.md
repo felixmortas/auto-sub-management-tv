@@ -4,22 +4,20 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 
 ## ⚙️ Fonctionnement du Workflow
 
-1. **Trigger :** Chaque jour à 12h, un scénario **Make.com** filtre les emails (from: HelloAsso AND subject:"Nouvelle adhésion").
-2. **Transfert :** Le corps de l'email est envoyé de manière sécurisée (Token Auth) à une fonction **AWS Lambda**.
-3. **Analyse IA :** La Lambda utilise **Mistral AI** pour parser l'email de manière robuste et extraire les informations de l'adhésion au format JSON, HTML ou texte brute (les autres formats n'ont pas été testés mais devraient fonctionner).
-4. **Logique Métier :** - Comparaison des données avec l'historique de l'année précédente (N-1).
+1. **Trigger :** Chaque lundi à 12h, un scénario **Make.com** filtre les emails (from: HelloAsso AND subject:"Nouvelle adhésion").
+2. **Transfert :** Les corps des email sont envoyés un par un de manière sécurisée (Token Auth) à une fonction **AWS Lambda**.
+3. **Analyse IA :** La Lambda utilise **Mistral AI** pour parser l'email de manière robuste et extraire les informations de l'adhésion aux formats JSON, HTML ou texte brute (les autres formats n'ont pas été testés mais devraient fonctionner). Le LLM est également utilisé pour gérer de multiples types d'erreurs de saisi des adhérents lors de la complétion du formulaire (doublons, mauvaise adhésion, fautes de frappe mineurs, email payeur différent de l'email adhérent).
+4. **Logique Métier :** - Comparaison des données avec l'historique de l'année précédente (par email, ou noms similaires en utilisant le LLM).
     - Inscription dans la feuille de l'année en cours.
     - Attribution de parcelle privative si nécessaire, selon la répartition actuelle.
 5. **Communication :** Envoi automatique d'un kit de bienvenue par email (Outlook) aux nouveaux adhérents contenant le règlement, le lien pour adhérer au groupe WhatsApp et le numéro de parcelle si nécessaire.
-6. **Nettoyage :** Après confirmation (Statut 200), l'email source est supprimé pour éviter les doublons.
-
-
+6. **Nettoyage :** Après confirmation (Statut 200), l'email source est déplacé vers un dossier d'archives pour éviter les doublons.
 
 ## 🛠️ Stack Technique
 
 - **Langage :** Python 3.11 (Programmation Orientée Objet)
 - **Infrastructure :** AWS Lambda (Serverless), Make.com (Orchestrateur)
-- **Parsing de l'email :** Mistral AI (Modèle `mistral-small-latest`)
+- **Parsing de l'email et correction des erreurs de saisie:** Mistral AI (Modèle `mistral-small-latest`)
 - **Stockage :** Google Sheets API (via `gspread` et `google-auth`)
 - **Communications :** Outlook API, WhatsApp API (Proof of Concept, fonctionnel en test mais non mis en production pour rester sur une application 100% gratuite)
 - **DevOps :** Git/GitHub, Variables d'environnement pour la sécurité
@@ -28,12 +26,15 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 
 ```text
 ├── core/
-│   ├── parser.py           # Logique d'interaction avec Mistral AI
+│   ├── parser.py           # Logique de parsing avec Mistral AI 
 │   └── logic.py            # Cerveau de l'application (règles métier)
+│   └── judge.py            # Diagnostic des erreurs de saisie avec Mistral AI
 ├── services/
 │   ├── excel_manager.py    # Interface avec l'API Google Sheets
 │   ├── outlook_service.py  # Gestion des envois d'emails
 │   └── whatsapp_service.py # Module WhatsApp (prêt pour déploiement)
+├── prompts/                # Stockage des prompts pour les LLM
+├── email_templates/        # Stockage des emails pour le service d'envoi d'emails
 ├── tests/                  # Tests unitaires et d'intégration
 ├── lambda_function.py      # Point d'entrée pour AWS Lambda
 ├── make_com.blueprint.json # Configuration du scénario Make
@@ -65,4 +66,5 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 - Secrets : Chaque secret est stocké dans les variables d'environnement d'AWS Lambda.
 - Gestion d'erreurs : En cas d'échec du parsing ou de l'écriture, le système ne valide pas la réception de l'email, permettant une reprise manuelle ou automatique. Les erreurs retournées sont claires et détaillées.
 - Tests : Couverture de tests pour chaque service pour garantir la non-régression.
-- Performance : La bibliothèque `requests` est priorisé pour les services externes afin minimiser le nombre de bibliothèques à installer lors du lancement de la fonction Lambda
+- Performance : La bibliothèque `requests` est priorisé pour les services externes afin de minimiser le nombre de bibliothèques à installer lors du lancement de la fonction Lambda.
+- Environnement : Un LLM à faible nombre de paramètres activés a été choisi pour limiter l'empreinte environnementale de l'IA.
