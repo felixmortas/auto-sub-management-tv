@@ -17,7 +17,7 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 
 - **Langage :** Python 3.11 (Programmation Orientée Objet)
 - **Infrastructure :** AWS Lambda (Serverless), Make.com (Orchestrateur)
-- **Parsing de l'email et correction des erreurs de saisie:** Mistral AI (Modèle `mistral-small-latest`)
+- **Parsing de l'email et correction des erreurs de saisie:** Mistral AI (Modèle `mistral-small-latest`, invoquant `mistral-small-2506` à la création du projet)
 - **Stockage :** Google Sheets API (via `gspread` et `google-auth`)
 - **Communications :** Outlook API, WhatsApp API (Proof of Concept, fonctionnel en test mais non mis en production pour rester sur une application 100% gratuite)
 - **DevOps :** Git/GitHub, Variables d'environnement pour la sécurité
