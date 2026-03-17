@@ -5,7 +5,7 @@ import requests
 class HelloAssoParser:
     @staticmethod
     def parse_email(email_content, api_key):
-        model = "mistral-small-latest"
+        model = "mistral-small-2506"
         url = "https://api.mistral.ai/v1/chat/completions"
         
         # 1. Chargement du prompt
