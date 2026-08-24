@@ -1,5 +1,6 @@
 import requests
 import os
+from urllib.parse import urlparse, parse_qs
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -9,6 +10,7 @@ CLIENT_ID = os.environ["OUTLOOK_CLIENT_ID"]
 CLIENT_SECRET = os.environ["OUTLOOK_CLIENT_SECRET"]
 REDIRECT_URI = "http://localhost"
 SCOPE = "https://graph.microsoft.com/Mail.Send offline_access"
+
 
 def get_tokens():
     # 1. Générer l'URL d'autorisation pour l'utilisateur
@@ -20,19 +22,30 @@ def get_tokens():
         f"&response_mode=query"
         f"&scope={SCOPE}"
     )
-    
+
     print("--- ÉTAPE 1 ---")
     print(f"Copiez cette URL dans votre navigateur :\n\n{auth_url}\n")
     print("--- ÉTAPE 2 ---")
     print("Connectez-vous. Vous allez arriver sur une page d'erreur (localhost).")
-    full_callback_url = input("Copiez ici l'URL complète de la barre d'adresse (celle qui commence par http://localhost/?code=...) : ")
+    print("⚠️  Faites vite : le code expire en quelques minutes et n'est utilisable qu'une seule fois.")
+    full_callback_url = input(
+        "Copiez ici l'URL complète de la barre d'adresse "
+        "(celle qui commence par http://localhost/?code=...) : "
+    )
 
-    # Extraction du code depuis l'URL
-    try:
-        code = full_callback_url.split("code=")[1].split("&")[0]
-    except IndexError:
+    # Proper parsing + URL-decoding of the query string, instead of a raw string split.
+    # Authorization codes often contain characters like +, /, =, $ which appear
+    # percent-encoded (%2B, %2F, %3D, %24...) in the browser address bar.
+    parsed_url = urlparse(full_callback_url)
+    query_params = parse_qs(parsed_url.query)
+
+    if "code" not in query_params:
         print("❌ Code introuvable dans l'URL fournie.")
+        if "error" in query_params:
+            print(f"Erreur retournée par Microsoft : {query_params.get('error_description')}")
         return
+
+    code = query_params["code"][0]
 
     # 2. Échange du code contre les jetons
     token_url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
@@ -47,7 +60,7 @@ def get_tokens():
 
     print("\n--- ÉTAPE 3 ---")
     print("Échange du code contre le Refresh Token...")
-    
+
     response = requests.post(token_url, data=data)
     res_data = response.json()
 
@@ -58,6 +71,7 @@ def get_tokens():
     else:
         print("\n❌ ERREUR lors de l'échange :")
         print(response.text)
+
 
 if __name__ == "__main__":
     get_tokens()
