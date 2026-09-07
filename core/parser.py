@@ -5,8 +5,8 @@ import requests
 class HelloAssoParser:
     @staticmethod
     def parse_email(email_content, api_key):
-        model = "mistral-small-2506"
-        url = "https://api.mistral.ai/v1/chat/completions"
+        model = "deepseek/deepseek-v4-flash-0731"
+        url = "https://ai-gateway.vercel.sh/v1/chat/completions"
         
         # 1. Chargement du prompt
         # On suppose que le dossier 'prompts' est à la racine du projet

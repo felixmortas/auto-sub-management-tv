@@ -13,7 +13,7 @@ def run_tests():
         "JSON": "tests/data/email_test.json"
     }
 
-    api_key = os.environ["MISTRAL_API_KEY"]
+    api_key = os.environ["AI_GATEWAY_API_KEY"]
 
     print("=== DÉBUT DES TESTS DE ROBUSTESSE PARSER LLM ===")
     
