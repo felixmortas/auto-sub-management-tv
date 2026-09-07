@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Charger les variables d'environnement depuis un fichier .env
 
 def run_tests():
-    api_key = os.environ["MISTRAL_API_KEY"]
+    api_key = os.environ["AI_GATEWAY_API_KEY"]
 
     print("=== DÉBUT DES TESTS DE JUGE LLM ===")
     

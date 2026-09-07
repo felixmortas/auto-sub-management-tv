@@ -6,7 +6,7 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 
 1. **Trigger :** Chaque lundi à 12h, un scénario **Make.com** filtre les emails (from: HelloAsso AND subject:"Nouvelle adhésion").
 2. **Transfert :** Les corps des email sont envoyés un par un de manière sécurisée (Token Auth) à une fonction **AWS Lambda**.
-3. **Analyse IA :** La Lambda utilise **Mistral AI** pour parser l'email de manière robuste et extraire les informations de l'adhésion aux formats JSON, HTML ou texte brute (les autres formats n'ont pas été testés mais devraient fonctionner). Le LLM est également utilisé pour gérer de multiples types d'erreurs de saisi des adhérents lors de la complétion du formulaire (doublons, mauvaise adhésion, fautes de frappe mineurs, email payeur différent de l'email adhérent).
+3. **Analyse IA :** La Lambda utilise un **LLM** pour parser l'email de manière robuste et extraire les informations de l'adhésion aux formats JSON, HTML ou texte brute (les autres formats n'ont pas été testés mais devraient fonctionner). Le LLM est également utilisé pour gérer de multiples types d'erreurs de saisi des adhérents lors de la complétion du formulaire (doublons, mauvaise adhésion, fautes de frappe mineurs, email payeur différent de l'email adhérent).
 4. **Logique Métier :** - Comparaison des données avec l'historique de l'année précédente (par email, ou noms similaires en utilisant le LLM).
     - Inscription dans la feuille de l'année en cours.
     - Attribution de parcelle privative si nécessaire, selon la répartition actuelle.
@@ -17,7 +17,7 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 
 - **Langage :** Python 3.11 (Programmation Orientée Objet)
 - **Infrastructure :** AWS Lambda (Serverless), Make.com (Orchestrateur)
-- **Parsing de l'email et correction des erreurs de saisie:** Mistral AI (Modèle `mistral-small-2506`)
+- **Parsing de l'email et correction des erreurs de saisie:** Vercel AI Gateway (Modèle `deepseek/deepseek-v4-flash-0731`)
 - **Stockage :** Google Sheets API (via `gspread` et `google-auth`)
 - **Communications :** Outlook API, WhatsApp API (Proof of Concept, fonctionnel en test mais non mis en production pour rester sur une application 100% gratuite)
 - **DevOps :** Git/GitHub, Variables d'environnement pour la sécurité
@@ -26,9 +26,9 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 
 ```text
 ├── core/
-│   ├── parser.py           # Logique de parsing avec Mistral AI 
+│   ├── parser.py           # Logique de parsing avec LLM 
 │   └── logic.py            # Cerveau de l'application (règles métier)
-│   └── judge.py            # Diagnostic des erreurs de saisie avec Mistral AI
+│   └── judge.py            # Diagnostic des erreurs de saisie avec LLM
 ├── services/
 │   ├── excel_manager.py    # Interface avec l'API Google Sheets
 │   ├── outlook_service.py  # Gestion des envois d'emails
@@ -45,7 +45,7 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 ## 🚀 Installation et Déploiement
 ### Pré-requis
 - Un compte AWS (Lambda)
-- Une clé API Mistral AI
+- Une clé API Vercel AI Gateway
 - Un compte de service Google Cloud (avec accès au Google Sheets)
 - Un compte Make.com
 - Une adresse email Outlook
@@ -53,7 +53,7 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 ## Configuration
 1. Cloner le dépôt.
 2. Créer un fichier .env (non versionné) avec :
-    - MISTRAL_API_KEY
+    - AI_GATEWAY_API_KEY
     - MAKE_TRIGGER_API_KEY (pour la sécurité Lambda)
     - OUTLOOK_CLIENT_ID
     - OUTLOOK_CLIENT_SECRET

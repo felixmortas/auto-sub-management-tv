@@ -5,8 +5,8 @@ import requests
 class Judge:
     @staticmethod
     def check_names(full_name, members_names, api_key):
-        model = "mistral-small-latest"
-        url = "https://api.mistral.ai/v1/chat/completions"
+        model = "deepseek/deepseek-v4-flash-0731"
+        url = "https://ai-gateway.vercel.sh/v1/chat/completions"
         
         # 1. Chargement du prompt
         # On suppose que le dossier 'prompts' est à la racine du projet
