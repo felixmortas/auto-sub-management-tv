@@ -25,7 +25,7 @@ class EnrollmentLogic:
         else:
             full_name = f"{member_data['first_name']} {member_data['last_name']}"
             members_names = self.excel.list_members_in_sheet(last_year)
-            judge_response = Judge.check_names(full_name, members_names, api_key=os.environ["MISTRAL_API_KEY"])
+            judge_response = Judge.check_names(full_name, members_names, api_key=os.environ["AI_GATEWAY_API_KEY"])
             if judge_response.get('similarity_found'):
                 last_name = judge_response.get('last_name')
                 old_data = self.excel.find_member_in_sheet(last_year, last_name=last_name)
