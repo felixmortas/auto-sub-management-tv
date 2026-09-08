@@ -1,6 +1,9 @@
+import logging
 import os
 import json
 import requests 
+
+logger = logging.getLogger(__name__)
 
 class HelloAssoParser:
     @staticmethod
@@ -51,6 +54,6 @@ class HelloAssoParser:
             return adhesions_list
 
         except Exception as e:
-            print(f"Erreur lors du parsing LLM : {e}")
+            logger.debug("❌ Erreur lors du parsing LLM : %s", e)
             # Fallback ou remontée de l'erreur selon votre besoin
             raise e

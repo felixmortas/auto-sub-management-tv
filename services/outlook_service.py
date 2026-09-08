@@ -1,5 +1,8 @@
+import logging
 import requests
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 class OutlookService:
     def __init__(self, client_id, client_secret, refresh_token, tenant_id="common", templates_dir="email_templates"):
@@ -41,7 +44,7 @@ class OutlookService:
 
 
     def send_plot_notification(self, recipient_email, first_name, plot_number):
-        print(f"🔵 Envoi notification Email à {recipient_email} pour la parcelle {plot_number}")
+        logger.debug("🔵 Envoi notification Email à %s pour la parcelle %s", recipient_email, plot_number)
         access_token = self._get_access_token()
 
         html_content = self._load_template(
@@ -66,14 +69,15 @@ class OutlookService:
         response = requests.post(self.send_url, headers=headers, json=email_content)
         
         if response.status_code == 202:
-            print("✅ Email envoyé avec succès.")
+            logger.debug("✅ Email envoyé avec succès.")
+
             return True
         else:
-            print(f"❌ Erreur email: {response.text}")
+            logger.debug("❌ Erreur email: %s", response.text)
             return False
         
     def send_new_sub_notification(self, recipient_email, first_name):
-        print(f"🔵 Envoi notification Email à {recipient_email} pour nouvelle adhésion")
+        logger.debug("🔵 Envoi notification Email à %s pour nouvelle adhésion", recipient_email)
         access_token = self._get_access_token()
 
         html_content = self._load_template(
@@ -96,8 +100,8 @@ class OutlookService:
         response = requests.post(self.send_url, headers=headers, json=email_content)
         
         if response.status_code == 202:
-            print("✅ Email envoyé avec succès.")
+            logger.debug("✅ Email envoyé avec succès.")
             return True
         else:
-            print(f"❌ Erreur email: {response.text}")
+            logger.debug("❌ Erreur email: %s", response.text)
             return False

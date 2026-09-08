@@ -1,5 +1,9 @@
+import logging
+
 import requests
 import json
+
+logger = logging.getLogger(__name__)
 
 class WhatsAppService:
     def __init__(self, token, phone_number_id):
@@ -13,7 +17,7 @@ class WhatsAppService:
         """
         Envoie un message via un modèle (Template) validé par Meta.
         """
-        print(f"🟢 Envoi notification WhatsApp à {recipient_phone} pour la parcelle {plot_number}")
+        logger.debug("🟢 Envoi notification WhatsApp à %s pour la parcelle %s", recipient_phone, plot_number)
         data = {
             "messaging_product": "whatsapp",
             "to": recipient_phone,
@@ -34,8 +38,8 @@ class WhatsAppService:
         }
         try:
             response = requests.post(self.url, headers=self.headers, data=json.dumps(data))
-            print(f"✅ Message envoyé, réponse: {response.status_code} - {response.text}")
+            logger.debug("✅ Message envoyé, réponse: %s - %s", response.status_code, response.text)
             return response.json()
         except Exception as e:
-            print(f"❌ Erreur lors de l'envoi du message WhatsApp: {e}")
+            logger.debug("❌ Erreur lors de l'envoi du message WhatsApp: %s", e)
             return None
