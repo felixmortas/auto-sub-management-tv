@@ -80,11 +80,11 @@ class ExcelManager:
         logger.debug("Aucune parcelle libre trouvée")
         return None, None
 
-    def assign_plot(self, plot_number, row_index, name):
+    def assign_plot(self, plot_number, row_index, email):
         """Inscrit l'occupant dans la feuille de configuration."""
-        logger.debug("Attribution de la parcelle %s à %s", plot_number, name)
+        logger.debug("Attribution de la parcelle %s à %s", plot_number, email)
         ws = self.sh.worksheet("Configuration_Parcelles")
-        ws.update_cell(row_index, 2, name)
+        ws.update_cell(row_index, 2, email)
 
     def remove_plot(self, plot_number):
         """Libère une parcelle en supprimant l'occupant."""

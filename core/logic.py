@@ -18,11 +18,13 @@ class EnrollmentLogic:
         plot_number = ""
         attribution_date = ""
 
-        # 1. Chercher dans l'année précédente
-        if member_data['email'] != "":            
+        # 1. Chercher l'adhérent dans l'année précédente
+        if member_data['email'] != "":     
+            # L'email a été trouvé dans la liste des adhérents de l'année précédente       
             old_data = self.excel.find_member_in_sheet(last_year, email=member_data['email'])
-        
+
         else:
+            # L'email n'a pas été trouvé -> recherche par nom et prénom (gère les fautes de frappe avec jugement du LLM)
             full_name = f"{member_data['first_name']} {member_data['last_name']}"
             members_names = self.excel.list_members_in_sheet(last_year)
             judge_response = Judge.check_names(full_name, members_names, api_key=os.environ["AI_GATEWAY_API_KEY"])
@@ -56,7 +58,7 @@ class EnrollmentLogic:
                 # Cas : N'a pas de parcelle et achète une parcelle supplémentaire
                 plot_number, row_idx = self.excel.get_free_plot()
                 if plot_number:
-                    self.excel.assign_plot(plot_number, row_idx, last_name)
+                    self.excel.assign_plot(plot_number, row_idx, email_1)
                     attribution_date = date
 
             elif member_data['has_plot'] and old_plot:
@@ -87,7 +89,7 @@ class EnrollmentLogic:
             if member_data['has_plot']:
                 plot_number, row_idx = self.excel.get_free_plot()
                 if plot_number:
-                    self.excel.assign_plot(plot_number, row_idx, last_name)
+                    self.excel.assign_plot(plot_number, row_idx, email_1)
                     attribution_date = date
                 
 
