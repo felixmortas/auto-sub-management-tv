@@ -1,8 +1,14 @@
+import logging
+
 import gspread
+
+logger = logging.getLogger(__name__)
+
 
 class ExcelManager:
     def __init__(self, spreadsheet_id, credentials_dict):
         # Connexion avec le compte de service
+        logger.debug("Connexion au classeur Google Sheets %s", spreadsheet_id)
         gc = gspread.service_account_from_dict(credentials_dict)
         self.sh = gc.open_by_key(spreadsheet_id)
 
@@ -16,15 +22,27 @@ class ExcelManager:
             elif last_name:
                 # On suppose que Nom de famille est à la colonne 1 (A)
                 cell = worksheet.find(last_name, in_column=1)
+            else:
+                return None
+
             if cell:
+                logger.debug("Adhérent trouvé dans '%s', ligne %s", sheet_name, cell.row)
                 return worksheet.row_values(cell.row)
+
+            logger.debug("Aucun adhérent trouvé dans '%s'", sheet_name)
             return None
         except gspread.WorksheetNotFound:
+            logger.debug("Feuille '%s' introuvable", sheet_name)
             return None
-        except Exception as e:
-            print(f"⚠️ Recherche impossible dans '{sheet_name}': {e}")
+        except Exception:
+            # DEBUG uniquement : reste totalement silencieux en prod.
+            logger.debug(
+                "Recherche impossible dans '%s'",
+                sheet_name,
+                exc_info=True,
+            )
             return None
-        
+
     def list_members_in_sheet(self, sheet_name):
         """Retourne une liste des noms complets des membres dans une feuille."""
         try:
@@ -32,49 +50,67 @@ class ExcelManager:
             data = worksheet.get_all_records()
 
             names = [f"{row['Prénom']} {row['Nom']}" for row in data]
+            logger.debug("%s membre(s) trouvé(s) dans '%s'", len(names), sheet_name)
             return names
         except gspread.WorksheetNotFound:
+            logger.debug("Feuille '%s' introuvable", sheet_name)
             return ""
-        except Exception as e:
-            print(f"⚠️ Impossible de lister les membres dans '{sheet_name}': {e}")
+        except Exception:
+            logger.debug(
+                "Impossible de lister les membres dans '%s'",
+                sheet_name,
+                exc_info=True,
+            )
             return ""
 
     def get_free_plot(self):
         """Trouve la première parcelle sans occupant."""
-        print(f"🔍 Recherche d'une parcelle libre...")
+        logger.debug("Recherche d'une parcelle libre...")
         ws = self.sh.worksheet("Configuration_Parcelles")
         data = ws.get_all_records()
-        for i, row in enumerate(data, start=2): # start=2 pour l'index Sheets
+        for i, row in enumerate(data, start=2):  # start=2 pour l'index Sheets
             if not row['Occupant Actuel']:
+                logger.debug(
+                    "Parcelle libre trouvée : %s (ligne %s)",
+                    row['Numéro Parcelle'],
+                    i,
+                )
                 return row['Numéro Parcelle'], i
+
+        logger.debug("Aucune parcelle libre trouvée")
         return None, None
 
     def assign_plot(self, plot_number, row_index, name):
         """Inscrit l'occupant dans la feuille de configuration."""
-        print(f"✍️ Attribution parcelle {plot_number} à {name}...")
+        logger.debug("Attribution de la parcelle %s à %s", plot_number, name)
         ws = self.sh.worksheet("Configuration_Parcelles")
         ws.update_cell(row_index, 2, name)
 
     def remove_plot(self, plot_number):
         """Libère une parcelle en supprimant l'occupant."""
-        print(f"🗑️ Libération de la parcelle {plot_number}...")
+        logger.debug("Libération de la parcelle %s", plot_number)
         ws = self.sh.worksheet("Configuration_Parcelles")
         data = ws.get_all_records()
         for i, row in enumerate(data, start=2):
             if row['Numéro Parcelle'] == plot_number:
                 ws.update_cell(i, 2, "")
-                print(f"✅ Parcelle {plot_number} libérée.")
+                logger.debug("Parcelle %s libérée", plot_number)
                 return
-        print(f"❌ Parcelle {plot_number} non trouvée.")
+
+        logger.debug("Parcelle %s non trouvée", plot_number)
 
     def add_new_row(self, sheet_name, row_data):
         """Ajoute une ligne à la fin de la feuille de l'année."""
-        print(f"🚀 Tentative d'ajout dans la feuille '{sheet_name}'...")
+        logger.debug("Tentative d'ajout dans la feuille '%s'", sheet_name)
         try:
             ws = self.sh.worksheet(sheet_name)
             ws.append_row(row_data)
-            print(f"✅ Ligne ajoutée avec succès dans {sheet_name}")
+            logger.debug("Ligne ajoutée avec succès dans '%s'", sheet_name)
         except gspread.exceptions.WorksheetNotFound:
-            print(f"❌ Erreur : La feuille '{sheet_name}' n'existe pas dans le document !")
-        except Exception as e:
-            print(f"❌ Erreur critique lors de l'ajout : {e}")
+            logger.debug("La feuille '%s' n'existe pas dans le document", sheet_name)
+        except Exception:
+            logger.debug(
+                "Erreur lors de l'ajout dans '%s'",
+                sheet_name,
+                exc_info=True,
+            )
