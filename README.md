@@ -54,12 +54,15 @@ Ce projet automatise le processus complet d'inscription des adhérents de l'asso
 1. Cloner le dépôt.
 2. Créer un fichier .env (non versionné) avec :
     - AI_GATEWAY_API_KEY
+    - MISTRAL_API_KEY (choisir MistralAI ou Vercel AI Gateway)
+    - GOOGLE_CREDS
     - MAKE_TRIGGER_API_KEY (pour la sécurité Lambda)
     - OUTLOOK_CLIENT_ID
     - OUTLOOK_CLIENT_SECRET
     - OUTLOOK_REFRESH_TOKEN
-3. Télécharger les credentials Google au format .json et réaliser le processus nécessaire pour modifier un fichier Sheets depuis l'API Google
-4. Utiliser pack.sh pour générer le .zip à uploader sur AWS Lambda.
+3. Télécharger les credentials Google au format .json et coller le contenu dans la variable d'environnement GOOGLE_CREDS
+4. Réaliser le processus nécessaire pour modifier un fichier Sheets depuis l'API Google
+5. Utiliser pack.sh pour générer le .zip à uploader sur AWS Lambda.
 
 ## 🛡️ Sécurité, robustesse et performances
 - Authentification : Chaque requête entre Make et Lambda est validée par un token de sécurité dans le header.
