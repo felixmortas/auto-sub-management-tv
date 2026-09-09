@@ -164,7 +164,7 @@ class OutlookService:
 
         self._get_access_token()
 
-    logger.debug("✅ Outlook authentication successful.")
+        logger.debug("✅ Outlook authentication successful.")
 
     def send_plot_notification(
         self,
