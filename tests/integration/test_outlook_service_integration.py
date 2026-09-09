@@ -27,7 +27,6 @@ import requests
 
 from services.outlook_service import OutlookService
 
-
 # ---------------------------------------------------------------------------
 # Skip condition: only run if real credentials are provided via env vars.
 # ---------------------------------------------------------------------------

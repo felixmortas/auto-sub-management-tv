@@ -1,8 +1,9 @@
-import requests
 import os
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
+import requests
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # CONFIGURATION

@@ -38,7 +38,6 @@ import pytest
 
 from services.excel_manager import ExcelManager
 
-
 # ---------------------------------------------------------------------------
 # Skip condition: only run if a real service account + spreadsheet are given.
 # ---------------------------------------------------------------------------

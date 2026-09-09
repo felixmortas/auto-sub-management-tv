@@ -28,10 +28,9 @@ logging.getLogger().setLevel(LOG_LEVEL)
 
 logger = logging.getLogger(__name__)
 
-from core.parser import HelloAssoParser
 from core.logic import EnrollmentLogic
+from core.parser import HelloAssoParser
 from services.excel_manager import ExcelManager
-from services.whatsapp_service import WhatsAppService
 from services.outlook_service import OutlookService
 
 
@@ -92,7 +91,7 @@ def lambda_handler(event, context):
         logger.exception("Erreur détaillée pendant le traitement de la Lambda")
         return {
             'statusCode': 500,
-            'body': json.dumps(f"Erreur interne : {str(e)}")
+            'body': json.dumps(f"Erreur interne : {e!s}")
         }
 
 

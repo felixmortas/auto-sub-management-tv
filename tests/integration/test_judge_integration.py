@@ -9,9 +9,10 @@ Run with:
 """
 
 import os
-import pytest
-from core.judge import Judge
 
+import pytest
+
+from core.judge import Judge
 
 # ---------------------------------------------------------------------------
 # Skip condition

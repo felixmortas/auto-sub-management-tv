@@ -1,7 +1,7 @@
+import json
 import logging
 
 import requests
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,6 @@ class WhatsAppService:
             response = requests.post(self.url, headers=self.headers, data=json.dumps(data))
             logger.debug("✅ Message envoyé, réponse: %s - %s", response.status_code, response.text)
             return response.json()
-        except Exception as e:
+        except requests.RequestException as e:
             logger.debug("❌ Erreur lors de l'envoi du message WhatsApp: %s", e)
             return None

@@ -1,5 +1,7 @@
 import os
+
 from core.judge import Judge
+
 
 class EnrollmentLogic:
     def __init__(self, excel_manager, whatsapp_service=None, outlook_service=None):
@@ -110,13 +112,12 @@ class EnrollmentLogic:
         
         # 3. Notification
         if self.whatsapp_service:
-            if phone_1 != "":
-                if plot_number and (not old_data or not old_data[5]):
-                    self.whatsapp_service.send_plot_notification(
-                        phone_1,
-                        first_name,
-                        plot_number
-                    )
+            if phone_1 != "" and plot_number and (not old_data or not old_data[5]):
+                self.whatsapp_service.send_plot_notification(
+                    phone_1,
+                    first_name,
+                    plot_number
+                )
         elif self.outlook_service:
             if plot_number and (not old_data or not old_data[5]) and email_1 != "":
                 self.outlook_service.send_plot_notification(

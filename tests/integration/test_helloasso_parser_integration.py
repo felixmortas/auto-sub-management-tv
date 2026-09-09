@@ -9,9 +9,10 @@ Run with:
 """
 
 import os
-import pytest
-from core.parser import HelloAssoParser
 
+import pytest
+
+from core.parser import HelloAssoParser
 
 # ---------------------------------------------------------------------------
 # Skip condition

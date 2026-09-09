@@ -1,7 +1,8 @@
+import json
 import logging
 import os
-import json
-import requests 
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -53,4 +54,4 @@ class Judge:
         except Exception as e:
             logger.debug("❌ Erreur lors du parsing LLM : %s", e)
             # Fallback ou remontée de l'erreur selon votre besoin
-            raise e
+            raise

@@ -6,14 +6,12 @@ Run with:
 """
 
 import json
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 
 from core.parser import HelloAssoParser
-
 
 # ---------------------------------------------------------------------------
 # Helper function
@@ -85,7 +83,7 @@ class TestHelloAssoParserParseEmail:
 
         # Verify API request structure
         mock_post.assert_called_once()
-        args, kwargs = mock_post.call_args
+        _, kwargs = mock_post.call_args
         assert kwargs["headers"]["Authorization"] == "Bearer fake-api-key"
         assert kwargs["json"]["model"] == "deepseek/deepseek-v4-flash-0731"
         assert kwargs["json"]["response_format"] == {"type": "json_object"}
