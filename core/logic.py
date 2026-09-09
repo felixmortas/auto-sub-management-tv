@@ -1,10 +1,6 @@
 import os
 from core.judge import Judge
 
-# DEV LOCAL
-# from dotenv import load_dotenv
-# load_dotenv()
-
 class EnrollmentLogic:
     def __init__(self, excel_manager, whatsapp_service=None, outlook_service=None):
         self.excel = excel_manager
@@ -20,11 +16,11 @@ class EnrollmentLogic:
 
         # 1. Chercher l'adhérent dans l'année précédente
         if member_data['email'] != "":     
-            # L'email a été trouvé dans la liste des adhérents de l'année précédente       
+            # L'adhérent a fourni son email       
             old_data = self.excel.find_member_in_sheet(last_year, email=member_data['email'])
 
         else:
-            # L'email n'a pas été trouvé -> recherche par nom et prénom (gère les fautes de frappe avec jugement du LLM)
+            # L'adhérent n'a pas fourni son email -> recherche par nom et prénom (gère les fautes de frappe avec jugement du LLM)
             full_name = f"{member_data['first_name']} {member_data['last_name']}"
             members_names = self.excel.list_members_in_sheet(last_year)
             judge_response = Judge.check_names(full_name, members_names, api_key=os.environ["AI_GATEWAY_API_KEY"])
@@ -133,3 +129,6 @@ class EnrollmentLogic:
                     email_1, # Utilise l'email
                     first_name
                 )
+
+            self.outlook_service.send_new_sub_notification(email_1, first_name)
+            
