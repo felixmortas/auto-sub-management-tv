@@ -1,0 +1,99 @@
+name: Test and deploy Lambda
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read    # Required for OIDC authentication
+  id-token: write   # Required to check out the repository
+
+env:
+  AWS_REGION: eu-west-3
+  ROLE_TO_ASSUME: arn:aws:iam::156977961041:role/github-action-deploy-lambda-auto-sub-management-tv
+  LAMBDA_FUNCTION_NAME: auto-sub-management-tv
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          ruff check src tests
+
+      - name: Unit tests
+        run: |
+          pytest tests/unit -v
+
+      - name: Integration tests
+        env:
+          # Gateway / LLM API Key
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+            
+          # Microsoft Graph / Outlook Variables
+          OUTLOOK_CLIENT_ID: ${{ secrets.OUTLOOK_CLIENT_ID }}
+          OUTLOOK_CLIENT_SECRET: ${{ secrets.OUTLOOK_CLIENT_SECRET }}
+          OUTLOOK_REFRESH_TOKEN: ${{ secrets.OUTLOOK_REFRESH_TOKEN }}
+          OUTLOOK_TEST_RECIPIENT: ${{ secrets.OUTLOOK_TEST_RECIPIENT }}
+          OUTLOOK_TENANT_ID: ${{ secrets.OUTLOOK_TENANT_ID }}
+
+          # Google Sheets Variables
+          GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
+          EXCEL_TEST_SPREADSHEET_ID: ${{ secrets.EXCEL_TEST_SPREADSHEET_ID }}
+        run: |
+          pytest tests/integration -v
+
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Lambda package
+        run: |
+          mkdir -p dist
+
+          pip install \
+            -r requirements.txt \
+            --target dist
+
+          cp -r src/* dist/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Lambda
+        uses: aws-actions/aws-lambda-deploy@v1
+        with:
+          function-name: ${{ env.LAMBDA_FUNCTION_NAME }}
+          code-artifacts-dir: ./dist
