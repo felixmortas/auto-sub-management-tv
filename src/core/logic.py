@@ -1,5 +1,7 @@
 import os
+
 from core.judge import Judge
+
 
 class EnrollmentLogic:
     """
@@ -45,15 +47,13 @@ class EnrollmentLogic:
 
         # 5. Send notifications
         is_new_plot = bool(plot_number) and (not old_data or not old_plot)
-        is_new_member = not bool(old_data)
         
         self._send_notifications(
             first_name=merged_info['first_name'],
             phone=merged_info['phone_1'],
             email=merged_info['email_1'],
             plot_number=plot_number,
-            is_new_plot=is_new_plot,
-            is_new_member=is_new_member
+            is_new_plot=is_new_plot
         )
 
     def _find_previous_member(self, member_data: dict, last_year: str) -> list | None:
@@ -168,19 +168,18 @@ class EnrollmentLogic:
             info['email_2']
         ]
 
-    def _send_notifications(self, first_name: str, phone: str, email: str, plot_number: str, is_new_plot: bool, is_new_member: bool) -> None:
+    def _send_notifications(self, first_name: str, phone: str, email: str, plot_number: str, is_new_plot: bool) -> None:
         """
         Handles notification dispatch. 
         WhatsApp is intentionally exclusive to prevent notifying the user twice.
         """
         # Exclusivity pattern: if WhatsApp is initialized, Outlook is ignored
-        if self.whatsapp_service:
-            if phone and is_new_plot:
+        if self.whatsapp_service and phone:
+            # self.whatsapp_serce.send_new_sub_notification(phone, first_name)
+            if is_new_plot:
                 self.whatsapp_service.send_plot_notification(phone, first_name, plot_number)
                 
-        elif self.outlook_service:
-            if email:
-                if is_new_plot:
-                    self.outlook_service.send_plot_notification(email, first_name, plot_number)
-                elif is_new_member:
-                    self.outlook_service.send_new_sub_notification(email, first_name)
+        elif self.outlook_service and email:
+            self.outlook_service.send_new_sub_notification(email, first_name)
+            if is_new_plot:
+                self.outlook_service.send_plot_notification(email, first_name, plot_number)
