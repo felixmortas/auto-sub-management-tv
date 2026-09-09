@@ -153,6 +153,19 @@ class OutlookService:
         )
         return False
 
+    def validate_connection(self):
+        """
+        Validate that Outlook authentication is working.
+
+        This forces the retrieval of an access token so that authentication
+        errors occur before the business process starts.
+        """
+        logger.debug("🔵 Validating Outlook connection...")
+
+        self._get_access_token()
+
+    logger.debug("✅ Outlook authentication successful.")
+
     def send_plot_notification(
         self,
         recipient_email,

@@ -68,6 +68,9 @@ def lambda_handler(event, context):
             refresh_token=os.environ["OUTLOOK_REFRESH_TOKEN"]
         )
 
+        # Fail early if Outlook authentication is no longer valid.
+        outlook_service.validate_connection()
+
         # 6. Exécution de la logique métier
         parsed_data = HelloAssoParser.parse_email(email_body, vercel_key)
         logger.debug("Données extraites : %s", parsed_data)
@@ -94,7 +97,7 @@ def lambda_handler(event, context):
 
 
 # --------------------------------------------------------------------------- #
-# Local simulation (replaces the old standalone local_run.py script).
+# Local simulation.
 # This whole section only runs when the file is executed directly
 # (e.g. via a debugger), never when AWS Lambda imports this module.
 # --------------------------------------------------------------------------- #
