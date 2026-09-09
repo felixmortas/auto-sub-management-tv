@@ -103,7 +103,7 @@ def lambda_handler(event, context):
 
 # Folder holding one .txt file per test scenario. Adding a new scenario is
 # just a matter of dropping a new .txt file here, no code change needed.
-SCENARIOS_DIR = Path(__file__).parent / "tests" / "data"
+SCENARIOS_DIR = Path(__file__).parent / ".." / "tests" / "data"
 DEFAULT_SCENARIO = "email_test"
 
 
