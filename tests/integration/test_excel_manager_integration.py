@@ -12,7 +12,7 @@ Setup:
        Editor.
     2. Export the following environment variables before running:
         GOOGLE_CREDS   # path to the service account JSON key
-        EXCEL_TEST_SPREADSHEET_ID         # id of the test spreadsheet
+        GOOGLE_SPREADSHEET_ID             # id of the test spreadsheet
         EXCEL_TEST_MEMBER_SHEET           # optional, defaults to "IntegrationTest"
 
     The test spreadsheet must contain:
@@ -44,7 +44,7 @@ from services.excel_manager import ExcelManager
 
 REQUIRED_ENV_VARS = [
     "GOOGLE_CREDS",
-    "EXCEL_TEST_SPREADSHEET_ID",
+    "GOOGLE_SPREADSHEET_ID",
 ]
 
 missing_vars = [var for var in REQUIRED_ENV_VARS if not os.environ.get(var)]
@@ -75,7 +75,7 @@ def credentials_dict():
 def real_manager(credentials_dict):
     """Build a real ExcelManager pointed at the actual test spreadsheet."""
     return ExcelManager(
-        spreadsheet_id=os.environ["EXCEL_TEST_SPREADSHEET_ID"],
+        spreadsheet_id=os.environ["GOOGLE_SPREADSHEET_ID"],
         credentials_dict=credentials_dict,
     )
 
