@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class HelloAssoParser:
     @staticmethod
-    def parse_email(email_content, api_key):
+    def parse_email(email_content, api_key, tracer):
         model = "deepseek/deepseek-v4-flash-0731"
         url = "https://ai-gateway.vercel.sh/v1/chat/completions"
         
@@ -35,24 +35,20 @@ class HelloAssoParser:
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            content = result['choices'][0]['message']['content']
-            
-            # 3. Conversion de la chaîne JSON en dictionnaire Python
-            parsed_data = json.loads(content)
+            with tracer.trace_llm_run("parse_email", payload) as run:
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+                response.raise_for_status()
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                parsed_data = json.loads(content)
+                adhesions_list = parsed_data.get("adhesions", [])
 
-            adhesions_list = parsed_data.get("adhesions", [])
-            
-            # Sécurité : On s'assure que les booléens sont corrects pour Excel
-            # (Certains LLM peuvent renvoyer des strings "true" au lieu de booleens)
-            for item in adhesions_list:
-                if isinstance(item.get('has_plot'), str):
-                    item['has_plot'] = item['has_plot'].lower() == 'true'
+                for item in adhesions_list:
+                    if isinstance(item.get('has_plot'), str):
+                        item['has_plot'] = item['has_plot'].lower() == 'true'
 
-            return adhesions_list
+                run["output"] = adhesions_list
+                return adhesions_list
 
         except Exception as e:
             logger.debug("❌ Erreur lors du parsing LLM : %s", e)

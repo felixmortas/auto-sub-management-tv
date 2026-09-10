@@ -47,17 +47,17 @@ def sample_members():
 
 class TestJudgeIntegration:
 
-    def test_check_names_positive_similarity(self, api_key, sample_members):
+    def test_check_names_positive_similarity(self, api_key, sample_members, tracer):
         """Test real LLM matching for a name with spelling/accent variations."""
-        result = Judge.check_names("Arturo Araujo", sample_members, api_key)
+        result = Judge.check_names("Arturo Araujo", sample_members, api_key, tracer=tracer)
 
         assert isinstance(result, dict)
         assert "similarity_found" in result
         assert result["similarity_found"] is True
 
-    def test_check_names_negative_similarity(self, api_key, sample_members):
+    def test_check_names_negative_similarity(self, api_key, sample_members, tracer):
         """Test real LLM matching for a name not in the list."""
-        result = Judge.check_names("Charles Darwin", sample_members, api_key)
+        result = Judge.check_names("Charles Darwin", sample_members, api_key, tracer=tracer)
 
         assert isinstance(result, dict)
         assert "similarity_found" in result

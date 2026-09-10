@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 
 class Judge:
     @staticmethod
-    def check_names(full_name, members_names, api_key):
+    def check_names(full_name, members_names, api_key, tracer):
         model = "deepseek/deepseek-v4-flash-0731"
         url = "https://ai-gateway.vercel.sh/v1/chat/completions"
-        
+
         # 1. Chargement du prompt
         # On suppose que le dossier 'prompts' est à la racine du projet
         prompt_path = os.path.join(os.path.dirname(__file__), '..', 'prompts', 'names_similarity_judge.md')
@@ -35,21 +35,23 @@ class Judge:
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            content = result['choices'][0]['message']['content']
-            
-            # 3. Conversion de la chaîne JSON en dictionnaire Python
-            parsed_data = json.loads(content)
-            
-            # Sécurité : On s'assure que les booléens sont corrects pour Excel
-            # (Certains LLM peuvent renvoyer des strings "true" au lieu de booleens)
-            if isinstance(parsed_data.get('similarity_found'), str):
-                parsed_data['similarity_found'] = parsed_data['similarity_found'].lower() == 'true'
+            with tracer.trace_llm_run("check_names", payload) as run:
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+                response.raise_for_status()
+                
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                
+                # 3. Conversion de la chaîne JSON en dictionnaire Python
+                parsed_data = json.loads(content)
+                
+                # Sécurité : On s'assure que les booléens sont corrects pour Excel
+                # (Certains LLM peuvent renvoyer des strings "true" au lieu de booleens)
+                if isinstance(parsed_data.get('similarity_found'), str):
+                    parsed_data['similarity_found'] = parsed_data['similarity_found'].lower() == 'true'
 
-            return parsed_data
+                run["output"] = parsed_data
+                return parsed_data
 
         except Exception as e:
             logger.debug("❌ Erreur lors du parsing LLM : %s", e)

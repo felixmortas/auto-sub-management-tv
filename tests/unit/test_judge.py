@@ -40,7 +40,7 @@ class TestJudgeCheckNames:
 
     @patch("core.judge.requests.post")
     @patch("builtins.open")
-    def test_check_names_similarity_found_string_boolean(self, mock_open, mock_post):
+    def test_check_names_similarity_found_string_boolean(self, mock_open, mock_post, tracer):
         """Test check_names converts string boolean 'true' to Python True."""
         mock_open.return_value.__enter__.return_value.read.return_value = (
             "System prompt for judging names"
@@ -63,7 +63,7 @@ class TestJudgeCheckNames:
         mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
         members = ["Jean Dupont", "Arturo Araùgo"]
-        result = Judge.check_names("Arturo Araujo", members, api_key="fake-api-key")
+        result = Judge.check_names("Arturo Araujo", members, api_key="fake-api-key", tracer=tracer)
 
         assert result["similarity_found"] is True
         assert result["matched_name"] == "Arturo Araùgo"
@@ -77,7 +77,7 @@ class TestJudgeCheckNames:
 
     @patch("core.judge.requests.post")
     @patch("builtins.open")
-    def test_check_names_no_similarity(self, mock_open, mock_post):
+    def test_check_names_no_similarity(self, mock_open, mock_post, tracer):
         """Test check_names when no match is found."""
         mock_open.return_value.__enter__.return_value.read.return_value = "Prompt"
         mock_llm_response = {
@@ -96,17 +96,17 @@ class TestJudgeCheckNames:
         }
         mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
-        result = Judge.check_names("Charles Darwin", ["Jean Dupont"], api_key="fake-api-key")
+        result = Judge.check_names("Charles Darwin", ["Jean Dupont"], api_key="fake-api-key", tracer=tracer)
 
         assert result["similarity_found"] is False
         assert result["matched_name"] is None
 
     @patch("core.judge.requests.post")
     @patch("builtins.open")
-    def test_check_names_raises_http_error(self, mock_open, mock_post):
+    def test_check_names_raises_http_error(self, mock_open, mock_post, tracer):
         """Test exception propagation on API error."""
         mock_open.return_value.__enter__.return_value.read.return_value = "Prompt"
         mock_post.return_value = make_response(status_code=401, text="Unauthorized")
 
         with pytest.raises(requests.HTTPError):
-            Judge.check_names("Unknown Name", ["Jean Dupont"], api_key="invalid-key")
+            Judge.check_names("Unknown Name", ["Jean Dupont"], api_key="invalid-key", tracer=tracer)

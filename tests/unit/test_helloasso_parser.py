@@ -40,7 +40,7 @@ class TestHelloAssoParserParseEmail:
 
     @patch("core.parser.requests.post")
     @patch("builtins.open")
-    def test_parse_email_success(self, mock_open, mock_post):
+    def test_parse_email_success(self, mock_open, mock_post, tracer):
         """Test successful parsing of email content with boolean conversion."""
         mock_open.return_value.__enter__.return_value.read.return_value = (
             "System prompt for parsing email"
@@ -72,7 +72,7 @@ class TestHelloAssoParserParseEmail:
         }
         mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
-        result = HelloAssoParser.parse_email("Contenu email test", api_key="fake-api-key")
+        result = HelloAssoParser.parse_email("Contenu email test", api_key="fake-api-key", tracer=tracer)
 
         # Verify that "true" string was converted to boolean True
         assert len(result) == 2
@@ -90,7 +90,7 @@ class TestHelloAssoParserParseEmail:
 
     @patch("core.parser.requests.post")
     @patch("builtins.open")
-    def test_parse_email_empty_adhesions(self, mock_open, mock_post):
+    def test_parse_email_empty_adhesions(self, mock_open, mock_post, tracer):
         """Test handling when no adhesions are returned."""
         mock_open.return_value.__enter__.return_value.read.return_value = "System prompt"
         mock_llm_response = {
@@ -104,23 +104,23 @@ class TestHelloAssoParserParseEmail:
         }
         mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
-        result = HelloAssoParser.parse_email("Aucune adhésion", api_key="fake-api-key")
+        result = HelloAssoParser.parse_email("Aucune adhésion", api_key="fake-api-key", tracer=tracer)
 
         assert result == []
 
     @patch("core.parser.requests.post")
     @patch("builtins.open")
-    def test_parse_email_http_error(self, mock_open, mock_post):
+    def test_parse_email_http_error(self, mock_open, mock_post, tracer):
         """Test HTTP error handling."""
         mock_open.return_value.__enter__.return_value.read.return_value = "System prompt"
         mock_post.return_value = make_response(status_code=500, text="Internal Error")
 
         with pytest.raises(requests.HTTPError):
-            HelloAssoParser.parse_email("Email content", api_key="fake-api-key")
+            HelloAssoParser.parse_email("Email content", api_key="fake-api-key", tracer=tracer)
 
     @patch("core.parser.requests.post")
     @patch("builtins.open")
-    def test_parse_email_invalid_json_response(self, mock_open, mock_post):
+    def test_parse_email_invalid_json_response(self, mock_open, mock_post, tracer):
         """Test error handling when LLM returns non-JSON string."""
         mock_open.return_value.__enter__.return_value.read.return_value = "System prompt"
         mock_llm_response = {
@@ -135,4 +135,4 @@ class TestHelloAssoParserParseEmail:
         mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
         with pytest.raises(json.JSONDecodeError):
-            HelloAssoParser.parse_email("Email content", api_key="fake-api-key")
+            HelloAssoParser.parse_email("Email content", api_key="fake-api-key", tracer=tracer)

@@ -42,7 +42,7 @@ def api_key():
 
 class TestHelloAssoParserIntegration:
 
-    def test_parse_sample_email_integration(self, api_key):
+    def test_parse_sample_email_integration(self, api_key, tracer):
         """Test parsing realistic text email content against the real API."""
         sample_email = """
         Bonjour,
@@ -53,7 +53,7 @@ class TestHelloAssoParserIntegration:
         Montant : 15 €
         """
 
-        result = HelloAssoParser.parse_email(sample_email, api_key)
+        result = HelloAssoParser.parse_email(sample_email, api_key, tracer=tracer)
 
         assert isinstance(result, list)
         if len(result) > 0:
@@ -66,7 +66,7 @@ class TestHelloAssoParserIntegration:
         ("HTML", "<div><p>Nom: Martin</p><p>Prénom: Sophie</p><p>Parcelle: Non</p></div>"),
         ("JSON", '{"nom": "Martin", "prenom": "Sophie", "parcelle": false}')
     ])
-    def test_parse_formats_robustness(self, api_key, file_type, content_sample):
+    def test_parse_formats_robustness(self, api_key, file_type, content_sample, tracer):
         """Ensure parser accepts various input text formats without crashing."""
-        result = HelloAssoParser.parse_email(content_sample, api_key)
+        result = HelloAssoParser.parse_email(content_sample, api_key, tracer=tracer)
         assert isinstance(result, list)

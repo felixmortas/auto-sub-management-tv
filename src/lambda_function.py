@@ -5,11 +5,16 @@ import os
 from core.logic import EnrollmentLogic
 from core.parser import HelloAssoParser
 from services.excel_manager import ExcelManager
+from services.langsmith_tracer import LangSmithTracer
 from services.outlook_service import OutlookService
 
 logger = logging.getLogger(__name__)
 # Sur AWS, on garde le niveau INFO par défaut
 logger.setLevel(logging.INFO)
+
+# Built once at module load time, reused across warm Lambda invocations
+tracer = LangSmithTracer(api_key=os.environ.get("LANGSMITH_API_KEY"), project=os.environ.get("LANGSMITH_PROJECT"))
+
 
 def lambda_handler(event, context):
     try:
@@ -22,7 +27,7 @@ def lambda_handler(event, context):
             return {'statusCode': 400, 'body': "Corps de l'email manquant"}
 
         # 2. Initialisation de l'API LLM pour le parsing
-        vercel_key = os.environ["AI_GATEWAY_API_KEY"]
+        llm_api_key = os.environ["AI_GATEWAY_API_KEY"]
         creds_json = json.loads(os.environ['GOOGLE_CREDS'])
         
         spreadsheet_id = os.environ['GOOGLE_SPREADSHEET_ID']
@@ -36,10 +41,10 @@ def lambda_handler(event, context):
         outlook_service.validate_connection()
 
         # 3. Exécution de la logique métier
-        parsed_data = HelloAssoParser.parse_email(email_body, vercel_key)
+        parsed_data = HelloAssoParser.parse_email(email_body, llm_api_key, tracer=tracer)
         logger.info("Données extraites : %s", parsed_data)
 
-        logic = EnrollmentLogic(excel_mgr, outlook_service=outlook_service)
+        logic = EnrollmentLogic(excel_mgr, outlook_service=outlook_service, tracer=tracer)
         for item in parsed_data:
             logic.process(item)
 
