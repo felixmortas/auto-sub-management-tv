@@ -1,56 +1,25 @@
-import json
-import logging
-import os
+from services.llm_client import LLMClient
 
-import requests
-
-logger = logging.getLogger(__name__)
 
 class HelloAssoParser:
+    """Perform business-level checks using an LLM."""
+
     @staticmethod
-    def parse_email(email_content, api_key, tracer):
-        model = "deepseek/deepseek-v4-flash-0731"
-        url = "https://ai-gateway.vercel.sh/v1/chat/completions"
-        
-        # 1. Chargement du prompt
-        # On suppose que le dossier 'prompts' est à la racine du projet
-        prompt_path = os.path.join(os.path.dirname(__file__), '..', 'prompts', 'email_parser.md')
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            system_prompt = f.read()
+    def parse_email(
+        email_content: str, 
+        llm_client: LLMClient,
+    ) -> dict:
+        """Parse the email and extract member data."""
+        result = llm_client.call(
+            system_prompt_filename="email_parser.md",
+            user_message=(
+                f"Contenu de l'email à parser :\n\n{email_content}"
+            ),
+            run_name="parse_email",
+        )
+        adhesions_list = result.get("adhesions", [])
+        for item in adhesions_list:
+            if isinstance(item.get('has_plot'), str):
+                item['has_plot'] = item['has_plot'].lower() == 'true'
 
-        # 2. Préparation de la requête
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Contenu de l'email à parser :\n\n{email_content}"}
-            ],
-            "response_format": {"type": "json_object"} # Force le format JSON
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }
-
-        try:
-            with tracer.trace_llm_run("parse_email", payload) as run:
-                response = requests.post(url, headers=headers, json=payload, timeout=30)
-                response.raise_for_status()
-                result = response.json()
-                content = result['choices'][0]['message']['content']
-                parsed_data = json.loads(content)
-                adhesions_list = parsed_data.get("adhesions", [])
-
-                for item in adhesions_list:
-                    if isinstance(item.get('has_plot'), str):
-                        item['has_plot'] = item['has_plot'].lower() == 'true'
-
-                run["output"] = adhesions_list
-                return adhesions_list
-
-        except Exception as e:
-            logger.debug("❌ Erreur lors du parsing LLM : %s", e)
-            # Fallback ou remontée de l'erreur selon votre besoin
-            raise
+        return adhesions_list

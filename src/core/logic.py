@@ -1,4 +1,3 @@
-import os
 
 from core.judge import Judge
 
@@ -8,11 +7,11 @@ class EnrollmentLogic:
     Manages the enrollment process for members, including renewing memberships,
     assigning/releasing plots, updating Excel records, and sending notifications.
     """
-    def __init__(self, excel_manager, whatsapp_service=None, outlook_service=None, tracer=None):
+    def __init__(self, excel_manager, llm_client, whatsapp_service=None, outlook_service=None):
         self.excel = excel_manager
         self.whatsapp_service = whatsapp_service
         self.outlook_service = outlook_service
-        self.tracer = tracer
+        self.llm_client = llm_client
 
     def process(self, member_data: dict) -> None:
         """
@@ -71,8 +70,7 @@ class EnrollmentLogic:
         judge_response = Judge.check_names(
             full_name, 
             members_names, 
-            api_key=os.environ["AI_GATEWAY_API_KEY"],
-            tracer=self.tracer
+            self.llm_client,
         )
         
         if judge_response.get('similarity_found'):
