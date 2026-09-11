@@ -25,7 +25,13 @@ class OutlookService:
             f"{tenant_id}/oauth2/v2.0/token"
         )
         self.send_url = "https://graph.microsoft.com/v1.0/me/sendMail"
-        self.templates_dir = Path(templates_dir)
+
+        if templates_dir is None:
+            # Resolve the template directory relative to the application root.
+            app_root = Path(__file__).resolve().parent.parent
+            self.templates_dir = app_root / "email_templates"
+        else:
+            self.templates_dir = Path(templates_dir)
 
         # Cache the access token to avoid requesting a new one
         # for every email sent.
