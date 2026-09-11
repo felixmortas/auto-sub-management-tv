@@ -6,9 +6,26 @@ in this directory (and subdirectories) — no import needed in the test
 files themselves.
 """
 
+import pathlib
+
 import pytest
 
 from services.langsmith_tracer import LangSmithTracer
+
+
+def pytest_collection_modifyitems(items):
+    """Auto-tag each test with 'unit' or 'integration' based on its folder
+    (tests/unit/ vs tests/integration/), so `-m unit` / `-m integration`
+    work without needing a `pytestmark` line in every single test file.
+    Tests already carrying an explicit marker (e.g. via pytestmark) simply
+    get it added again, which is a harmless no-op.
+    """
+    for item in items:
+        parts = pathlib.Path(str(item.fspath)).parts
+        if "unit" in parts:
+            item.add_marker(pytest.mark.unit)
+        elif "integration" in parts:
+            item.add_marker(pytest.mark.integration)
 
 
 @pytest.fixture
