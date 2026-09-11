@@ -81,7 +81,9 @@ class LLMClient:
             "Authorization": f"Bearer {self.api_key}",
         }
 
-        with self.tracer.trace_llm_run(run_name, payload) as run:
+        provider, model_name = self.model.split("/")
+
+        with self.tracer.trace_llm_run(run_name, payload, metadata={"ls_provider": provider, "ls_model_name": model_name}) as run:
             response = requests.post(
                 self.url,
                 headers=headers,
@@ -92,96 +94,27 @@ class LLMClient:
             result = response.json()
             content = result["choices"][0]["message"]["content"]
 
-            usage = self._normalize_usage(result.get("usage"))
             parsed_data = json.loads(content)
 
-            run["output"] = parsed_data
+            total_output_tokens = result["usage"]["completion_tokens"]
+            reasoning_tokens = result["usage"]["completion_tokens_details"]["reasoning_tokens"]
+            completion_tokens = total_output_tokens - reasoning_tokens
+
+            usage_metadata = {
+                "total_tokens": result["usage"]["total_tokens"],
+                "prompt_tokens": result["usage"]["prompt_tokens"],
+                "reasoning_tokens": reasoning_tokens,
+                "completion_tokens": completion_tokens,
+                "total_output_tokens": total_output_tokens,
+                "cost": result["usage"]["cost"],
+            }
+
+
+            run["reasoning"] = result["choices"][0]["message"]["reasoning"]
+            run["content"] = parsed_data
+            run["usage_metadata"] = usage_metadata
 
             return parsed_data
-
-    @staticmethod
-    def normalize_bool(value: Any) -> Any:
-        """Normalize common string boolean representations.
-
-        Args:
-            value: Value to normalize.
-
-        Returns:
-            A boolean for recognized string representations, otherwise the
-            original value.
-        """
-        if isinstance(value, str):
-            normalized = value.strip().lower()
-            if normalized == "true":
-                return True
-            if normalized == "false":
-                return False
-
-        return value
-
-    @staticmethod
-    def normalize_int(value: Any) -> Any:
-        """Normalize integer-like strings without coercing unrelated values.
-
-        Args:
-            value: Value to normalize.
-
-        Returns:
-            An integer when the value is an integer-like string, otherwise the
-            original value.
-        """
-        if isinstance(value, str):
-            normalized = value.strip()
-
-            try:
-                return int(normalized)
-            except ValueError:
-                return value
-
-        return value
-
-    @staticmethod
-    def _normalize_usage(usage: dict | None) -> dict | None:
-        """Normalize token usage into LangSmith's expected format."""
-        if not usage:
-            return None
-
-        input_tokens = usage.get(
-            "input_tokens",
-            usage.get("prompt_tokens"),
-        )
-        output_tokens = usage.get(
-            "output_tokens",
-            usage.get("completion_tokens"),
-        )
-        total_tokens = usage.get("total_tokens")
-
-        if input_tokens is None and output_tokens is None:
-            return None
-
-        input_tokens = input_tokens or 0
-        output_tokens = output_tokens or 0
-
-        return {
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "total_tokens": (
-                total_tokens
-                if total_tokens is not None
-                else input_tokens + output_tokens
-            ),
-        }
-
-    @staticmethod
-    def _extract_content(result: dict) -> str:
-        """Extract assistant content from a supported API response."""
-        if "choices" in result:
-            return result["choices"][0]["message"]["content"]
-
-        if "output_text" in result:
-            return result["output_text"]
-
-        raise ValueError("Unsupported LLM response format")
 
     @staticmethod
     def _load_system_prompt(system_prompt_filename: str) -> str:

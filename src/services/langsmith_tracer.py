@@ -60,7 +60,7 @@ class LangSmithTracer:
     def _now_iso():
         return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    def start_run(self, name, run_type, inputs, run_id=None, parent_run_id=None):
+    def start_run(self, name, run_type, inputs, run_id=None, parent_run_id=None, extra=None):
         """Create a run in LangSmith. Returns the run_id (or None if disabled/failed)."""
         if not self.enabled:
             return None
@@ -79,6 +79,9 @@ class LangSmithTracer:
         }
         if parent_run_id:
             payload["parent_run_id"] = parent_run_id
+
+        if extra:
+            payload["extra"] = extra
 
         try:
             response = requests.post(
@@ -115,7 +118,7 @@ class LangSmithTracer:
             logger.debug("LangSmith end_run failed: %s", e)
 
     @contextlib.contextmanager
-    def trace_llm_run(self, name, inputs, run_type="llm"):
+    def trace_llm_run(self, name, inputs, run_type="llm", metadata = None):
         """
         Context manager wrapping a single LLM call.
 
@@ -126,7 +129,7 @@ class LangSmithTracer:
 
         On exception, the run is closed with the error and the exception is re-raised.
         """
-        run_id = self.start_run(name=name, run_type=run_type, inputs=inputs)
+        run_id = self.start_run(name=name, run_type=run_type, inputs=inputs, extra={"metadata": metadata})
         outputs = {}
         try:
             yield outputs
