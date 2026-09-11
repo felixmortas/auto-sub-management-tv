@@ -14,7 +14,7 @@ class OutlookService:
         client_secret,
         refresh_token,
         tenant_id="common",
-        templates_dir="src/email_templates"
+        templates_dir=None
     ):
         self.client_id = client_id
         self.client_secret = client_secret
