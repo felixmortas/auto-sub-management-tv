@@ -1,112 +1,86 @@
 """
 Unit tests for Judge.
 
+Judge now delegates all LLM interaction to an injected LLMClient, so these
+tests mock `llm_client.call()` directly instead of the HTTP layer.
+
 Run with:
     pytest test_judge.py -v
 """
 
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import requests
 
 from core.judge import Judge
+from services.llm_client import LLMClient
 
 # ---------------------------------------------------------------------------
-# Helper function
+# Fixtures
 # ---------------------------------------------------------------------------
 
-def make_response(status_code=200, json_data=None, text=""):
-    """Build a fake requests.Response-like object."""
-    mock_response = MagicMock(spec=requests.Response)
-    mock_response.status_code = status_code
-    mock_response.text = text
-    mock_response.json.return_value = json_data or {}
 
-    def raise_for_status():
-        if status_code >= 400:
-            raise requests.HTTPError(f"HTTP {status_code}")
-
-    mock_response.raise_for_status.side_effect = raise_for_status
-    return mock_response
+@pytest.fixture
+def mock_llm_client():
+    """Provide a mock LLMClient whose call() return value is set per test."""
+    return MagicMock(spec=LLMClient)
 
 
 # ---------------------------------------------------------------------------
 # Judge.check_names
 # ---------------------------------------------------------------------------
 
+
 class TestJudgeCheckNames:
 
-    @patch("core.judge.requests.post")
-    @patch("builtins.open")
-    def test_check_names_similarity_found_string_boolean(self, mock_open, mock_post, tracer):
-        """Test check_names converts string boolean 'true' to Python True."""
-        mock_open.return_value.__enter__.return_value.read.return_value = (
-            "System prompt for judging names"
-        )
-
-        mock_llm_response = {
-            "choices": [
-                {
-                    "message": {
-                        "content": json.dumps({
-                            "similarity_found": "true",
-                            "matched_name": "Arturo Araùgo",
-                            "confidence": 0.95,
-                            "reasoning": "Variante accentuée et coquille mineure"
-                        })
-                    }
-                }
-            ]
+    def test_check_names_converts_string_boolean_to_bool(self, mock_llm_client):
+        """A 'true' string returned by the LLM should be converted to Python True."""
+        mock_llm_client.call.return_value = {
+            "similarity_found": "true",
+            "matched_name": "Arturo Araùgo",
+            "confidence": 0.95,
+            "reasoning": "Variante accentuée et coquille mineure",
         }
-        mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
         members = ["Jean Dupont", "Arturo Araùgo"]
-        result = Judge.check_names("Arturo Araujo", members, api_key="fake-api-key", tracer=tracer)
+        result = Judge.check_names("Arturo Araujo", members, mock_llm_client)
 
         assert result["similarity_found"] is True
         assert result["matched_name"] == "Arturo Araùgo"
         assert result["confidence"] == 0.95
 
-        # Verify payload details
-        mock_post.assert_called_once()
-        kwargs = mock_post.call_args[1]
-        assert kwargs["headers"]["Authorization"] == "Bearer fake-api-key"
-        assert "Arturo Araujo" in kwargs["json"]["messages"][1]["content"]
-
-    @patch("core.judge.requests.post")
-    @patch("builtins.open")
-    def test_check_names_no_similarity(self, mock_open, mock_post, tracer):
-        """Test check_names when no match is found."""
-        mock_open.return_value.__enter__.return_value.read.return_value = "Prompt"
-        mock_llm_response = {
-            "choices": [
-                {
-                    "message": {
-                        "content": json.dumps({
-                            "similarity_found": False,
-                            "matched_name": None,
-                            "confidence": 0.0,
-                            "reasoning": "Aucune correspondance dans la liste"
-                        })
-                    }
-                }
-            ]
+    def test_check_names_leaves_native_boolean_untouched(self, mock_llm_client):
+        """A native Python bool returned by the LLM should pass through unchanged."""
+        mock_llm_client.call.return_value = {
+            "similarity_found": False,
+            "matched_name": None,
+            "confidence": 0.0,
+            "reasoning": "Aucune correspondance dans la liste",
         }
-        mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
-        result = Judge.check_names("Charles Darwin", ["Jean Dupont"], api_key="fake-api-key", tracer=tracer)
+        result = Judge.check_names("Charles Darwin", ["Jean Dupont"], mock_llm_client)
 
         assert result["similarity_found"] is False
         assert result["matched_name"] is None
 
-    @patch("core.judge.requests.post")
-    @patch("builtins.open")
-    def test_check_names_raises_http_error(self, mock_open, mock_post, tracer):
-        """Test exception propagation on API error."""
-        mock_open.return_value.__enter__.return_value.read.return_value = "Prompt"
-        mock_post.return_value = make_response(status_code=401, text="Unauthorized")
+    def test_check_names_calls_llm_client_with_expected_arguments(self, mock_llm_client):
+        """check_names should delegate to llm_client.call with the right prompt file,
+        run name, and a user message containing both the candidate and member names."""
+        mock_llm_client.call.return_value = {"similarity_found": False}
 
-        with pytest.raises(requests.HTTPError):
-            Judge.check_names("Unknown Name", ["Jean Dupont"], api_key="invalid-key", tracer=tracer)
+        Judge.check_names("Charles Darwin", ["Jean Dupont", "Marie Curie"], mock_llm_client)
+
+        mock_llm_client.call.assert_called_once()
+        _, kwargs = mock_llm_client.call.call_args
+        assert kwargs["system_prompt_filename"] == "names_similarity_judge.md"
+        assert kwargs["run_name"] == "check_names"
+        assert "Charles Darwin" in kwargs["user_message"]
+        assert "Jean Dupont" in kwargs["user_message"]
+        assert "Marie Curie" in kwargs["user_message"]
+
+    def test_check_names_propagates_llm_client_errors(self, mock_llm_client):
+        """Any exception raised by the underlying LLM client should propagate unchanged."""
+        mock_llm_client.call.side_effect = RuntimeError("LLM gateway unavailable")
+
+        with pytest.raises(RuntimeError):
+            Judge.check_names("Charles Darwin", ["Jean Dupont"], mock_llm_client)

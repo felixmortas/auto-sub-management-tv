@@ -1,138 +1,87 @@
 """
 Unit tests for HelloAssoParser.
 
+HelloAssoParser now delegates all LLM interaction to an injected LLMClient,
+so these tests mock `llm_client.call()` directly instead of the HTTP layer.
+
 Run with:
     pytest test_helloasso_parser.py -v
 """
 
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import requests
 
 from core.parser import HelloAssoParser
+from services.llm_client import LLMClient
 
 # ---------------------------------------------------------------------------
-# Helper function
+# Fixtures
 # ---------------------------------------------------------------------------
 
-def make_response(status_code=200, json_data=None, text=""):
-    """Build a fake requests.Response-like object."""
-    mock_response = MagicMock(spec=requests.Response)
-    mock_response.status_code = status_code
-    mock_response.text = text
-    mock_response.json.return_value = json_data or {}
 
-    def raise_for_status():
-        if status_code >= 400:
-            raise requests.HTTPError(f"HTTP {status_code}")
-
-    mock_response.raise_for_status.side_effect = raise_for_status
-    return mock_response
+@pytest.fixture
+def mock_llm_client():
+    """Provide a mock LLMClient whose call() return value is set per test."""
+    return MagicMock(spec=LLMClient)
 
 
 # ---------------------------------------------------------------------------
 # HelloAssoParser.parse_email
 # ---------------------------------------------------------------------------
 
+
 class TestHelloAssoParserParseEmail:
 
-    @patch("core.parser.requests.post")
-    @patch("builtins.open")
-    def test_parse_email_success(self, mock_open, mock_post, tracer):
-        """Test successful parsing of email content with boolean conversion."""
-        mock_open.return_value.__enter__.return_value.read.return_value = (
-            "System prompt for parsing email"
-        )
-
-        mock_llm_response = {
-            "choices": [
-                {
-                    "message": {
-                        "content": json.dumps({
-                            "adhesions": [
-                                {
-                                    "first_name": "Jean",
-                                    "last_name": "Dupont",
-                                    "has_plot": "true",
-                                    "amount": 15
-                                },
-                                {
-                                    "first_name": "Marie",
-                                    "last_name": "Curie",
-                                    "has_plot": False,
-                                    "amount": 10
-                                }
-                            ]
-                        })
-                    }
-                }
+    def test_parse_email_converts_string_boolean_has_plot(self, mock_llm_client):
+        """A 'true'/'false' string for has_plot should be converted to a Python bool."""
+        mock_llm_client.call.return_value = {
+            "adhesions": [
+                {"first_name": "Jean", "last_name": "Dupont", "has_plot": "true", "amount": 15},
+                {"first_name": "Marie", "last_name": "Curie", "has_plot": False, "amount": 10},
             ]
         }
-        mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
 
-        result = HelloAssoParser.parse_email("Contenu email test", api_key="fake-api-key", tracer=tracer)
+        result = HelloAssoParser.parse_email("Contenu email test", mock_llm_client)
 
-        # Verify that "true" string was converted to boolean True
         assert len(result) == 2
         assert result[0]["first_name"] == "Jean"
         assert result[0]["has_plot"] is True
         assert result[1]["first_name"] == "Marie"
         assert result[1]["has_plot"] is False
 
-        # Verify API request structure
-        mock_post.assert_called_once()
-        _, kwargs = mock_post.call_args
-        assert kwargs["headers"]["Authorization"] == "Bearer fake-api-key"
-        assert kwargs["json"]["model"] == "deepseek/deepseek-v4-flash-0731"
-        assert kwargs["json"]["response_format"] == {"type": "json_object"}
+    def test_parse_email_empty_adhesions(self, mock_llm_client):
+        """An explicit empty adhesions list should result in an empty list, without error."""
+        mock_llm_client.call.return_value = {"adhesions": []}
 
-    @patch("core.parser.requests.post")
-    @patch("builtins.open")
-    def test_parse_email_empty_adhesions(self, mock_open, mock_post, tracer):
-        """Test handling when no adhesions are returned."""
-        mock_open.return_value.__enter__.return_value.read.return_value = "System prompt"
-        mock_llm_response = {
-            "choices": [
-                {
-                    "message": {
-                        "content": json.dumps({"adhesions": []})
-                    }
-                }
-            ]
-        }
-        mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
-
-        result = HelloAssoParser.parse_email("Aucune adhésion", api_key="fake-api-key", tracer=tracer)
+        result = HelloAssoParser.parse_email("Aucune adhésion", mock_llm_client)
 
         assert result == []
 
-    @patch("core.parser.requests.post")
-    @patch("builtins.open")
-    def test_parse_email_http_error(self, mock_open, mock_post, tracer):
-        """Test HTTP error handling."""
-        mock_open.return_value.__enter__.return_value.read.return_value = "System prompt"
-        mock_post.return_value = make_response(status_code=500, text="Internal Error")
+    def test_parse_email_missing_adhesions_key_defaults_to_empty_list(self, mock_llm_client):
+        """A response with no 'adhesions' key at all should not raise, and default to []."""
+        mock_llm_client.call.return_value = {}
 
-        with pytest.raises(requests.HTTPError):
-            HelloAssoParser.parse_email("Email content", api_key="fake-api-key", tracer=tracer)
+        result = HelloAssoParser.parse_email("Contenu inattendu", mock_llm_client)
 
-    @patch("core.parser.requests.post")
-    @patch("builtins.open")
-    def test_parse_email_invalid_json_response(self, mock_open, mock_post, tracer):
-        """Test error handling when LLM returns non-JSON string."""
-        mock_open.return_value.__enter__.return_value.read.return_value = "System prompt"
-        mock_llm_response = {
-            "choices": [
-                {
-                    "message": {
-                        "content": "Not a valid JSON"
-                    }
-                }
-            ]
-        }
-        mock_post.return_value = make_response(status_code=200, json_data=mock_llm_response)
+        assert result == []
 
-        with pytest.raises(json.JSONDecodeError):
-            HelloAssoParser.parse_email("Email content", api_key="fake-api-key", tracer=tracer)
+    def test_parse_email_calls_llm_client_with_expected_arguments(self, mock_llm_client):
+        """parse_email should delegate to llm_client.call with the right prompt file,
+        run name, and the raw email content in the user message."""
+        mock_llm_client.call.return_value = {"adhesions": []}
+
+        HelloAssoParser.parse_email("Some raw email body", mock_llm_client)
+
+        mock_llm_client.call.assert_called_once()
+        _, kwargs = mock_llm_client.call.call_args
+        assert kwargs["system_prompt_filename"] == "email_parser.md"
+        assert kwargs["run_name"] == "parse_email"
+        assert "Some raw email body" in kwargs["user_message"]
+
+    def test_parse_email_propagates_llm_client_errors(self, mock_llm_client):
+        """Any exception raised by the underlying LLM client should propagate unchanged."""
+        mock_llm_client.call.side_effect = RuntimeError("LLM gateway unavailable")
+
+        with pytest.raises(RuntimeError):
+            HelloAssoParser.parse_email("Email content", mock_llm_client)
