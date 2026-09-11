@@ -82,7 +82,7 @@ def real_manager(credentials_dict):
 
 @pytest.fixture(scope="module")
 def member_sheet_name():
-    return os.environ.get("EXCEL_TEST_MEMBER_SHEET", "IntegrationTest")
+    return os.environ.get("EXCEL_TEST_MEMBER_SHEET", "2026")
 
 
 # ---------------------------------------------------------------------------
