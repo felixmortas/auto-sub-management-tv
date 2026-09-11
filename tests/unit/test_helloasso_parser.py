@@ -8,6 +8,7 @@ Run with:
     pytest test_helloasso_parser.py -v
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -24,6 +25,33 @@ from services.llm_client import LLMClient
 def mock_llm_client():
     """Provide a mock LLMClient whose call() return value is set per test."""
     return MagicMock(spec=LLMClient)
+
+
+@pytest.fixture
+def expected_txt_fixture():
+    """Load the expected cleaned text email file."""
+    file_path = Path(__file__).parent.parent / "data" / "email_test.txt"
+    return file_path.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# HelloAssoParser._clean_html
+# ---------------------------------------------------------------------------
+
+
+class TestHelloAssoParserCleanHtml:
+
+    def test_clean_html_matches_expected_text_file(self, html_email_fixture, expected_txt_fixture):
+        """_clean_html should convert HTML email into the exact expected cleaned text."""
+        cleaned_text = HelloAssoParser._clean_html(html_email_fixture)
+        
+        # We compare stripped strings to ignore trailing whitespace/newlines diffs
+        assert cleaned_text.strip() == expected_txt_fixture.strip()
+
+    def test_clean_html_handles_empty_input(self):
+        """_clean_html should return an empty string when given empty input."""
+        assert HelloAssoParser._clean_html("") == ""
+        assert HelloAssoParser._clean_html(None) == ""
 
 
 # ---------------------------------------------------------------------------
@@ -66,18 +94,20 @@ class TestHelloAssoParserParseEmail:
 
         assert result == []
 
-    def test_parse_email_calls_llm_client_with_expected_arguments(self, mock_llm_client):
-        """parse_email should delegate to llm_client.call with the right prompt file,
-        run name, and the raw email content in the user message."""
+    def test_parse_email_calls_llm_client_with_cleaned_html(self, mock_llm_client, html_email_fixture, expected_txt_fixture):
+        """parse_email should clean HTML input before passing it to llm_client.call."""
         mock_llm_client.call.return_value = {"adhesions": []}
 
-        HelloAssoParser.parse_email("Some raw email body", mock_llm_client)
+        HelloAssoParser.parse_email(html_email_fixture, mock_llm_client)
 
         mock_llm_client.call.assert_called_once()
         _, kwargs = mock_llm_client.call.call_args
         assert kwargs["system_prompt_filename"] == "email_parser.md"
         assert kwargs["run_name"] == "parse_email"
-        assert "Some raw email body" in kwargs["user_message"]
+        
+        # Verify the prompt sent to LLM contains cleaned text, not HTML
+        assert expected_txt_fixture.strip() in kwargs["user_message"]
+        assert "<html" not in kwargs["user_message"]
 
     def test_parse_email_propagates_llm_client_errors(self, mock_llm_client):
         """Any exception raised by the underlying LLM client should propagate unchanged."""

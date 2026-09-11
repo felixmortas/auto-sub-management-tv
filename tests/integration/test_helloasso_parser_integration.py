@@ -51,18 +51,10 @@ def llm_client(tracer):
 
 class TestHelloAssoParserIntegration:
 
-    def test_parse_sample_email_integration(self, llm_client):
+    def test_parse_sample_email_integration(self, html_email_fixture, llm_client):
         """Parsing a realistic French adhesion email should return a list of adhesion dicts."""
-        sample_email = """
-        Bonjour,
-        Nouvelle adhésion reçue via HelloAsso :
-        Nom : Dupont
-        Prénom : Jean
-        Option Parcelle : Oui
-        Montant : 15 €
-        """
 
-        result = HelloAssoParser.parse_email(sample_email, llm_client)
+        result = HelloAssoParser.parse_email(html_email_fixture, llm_client)
 
         assert isinstance(result, list)
         if len(result) > 0:

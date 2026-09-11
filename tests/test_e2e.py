@@ -16,7 +16,7 @@ SCENARIOS_DIR = Path(__file__).parent / "data"
 @pytest.fixture
 def mock_event():
     """Génère un faux event d'API Gateway contenant l'email de test."""
-    scenario_path = SCENARIOS_DIR / "email_test.txt"
+    scenario_path = SCENARIOS_DIR / "email_test.html"
     if not scenario_path.exists():
         pytest.fail(f"Le fichier de test {scenario_path} est introuvable.")
         

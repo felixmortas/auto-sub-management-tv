@@ -44,3 +44,9 @@ def tracer():
     locally in that test instead of using this fixture.
     """
     return LangSmithTracer(enabled=False)
+
+@pytest.fixture
+def html_email_fixture():
+    """Load the raw test HTML email file."""
+    file_path = pathlib.Path(__file__).parent / "data" / "email_test.html"
+    return file_path.read_text(encoding="utf-8")
