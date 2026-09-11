@@ -94,7 +94,9 @@ class LLMClient:
             result = response.json()
             content = result["choices"][0]["message"]["content"]
 
-            parsed_data = json.loads(content)
+            # Only decode the content as JSON when explicitly requested. Otherwise,
+            # return the raw text exactly as the model produced it.
+            parsed_data = json.loads(content) if parse_json else content
 
             total_output_tokens = result["usage"]["completion_tokens"]
             reasoning_tokens = result["usage"]["completion_tokens_details"]["reasoning_tokens"]
