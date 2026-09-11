@@ -304,24 +304,6 @@ class TestLLMClientCallErrors:
             )
 
     @patch("services.llm_client.requests.post")
-    @patch.object(LLMClient, "_load_system_prompt", return_value="System prompt")
-    def test_call_raises_key_error_on_missing_usage_field(self, mock_load_prompt, mock_post, llm_client):
-        """A response missing an expected field (e.g. usage) should raise KeyError."""
-        mock_post.return_value = make_http_response(
-            json_data={
-                "choices": [{"message": {"content": json.dumps({"ok": True}), "reasoning": "n/a"}}]
-                # "usage" key intentionally omitted.
-            }
-        )
-
-        with pytest.raises(KeyError):
-            llm_client.call(
-                system_prompt_filename="dummy_prompt.md",
-                user_message="Hi",
-                run_name="test_run",
-            )
-
-    @patch("services.llm_client.requests.post")
     def test_call_raises_file_not_found_for_missing_prompt(self, mock_post, llm_client):
         """A missing system prompt file should raise FileNotFoundError before any HTTP call."""
         with pytest.raises(FileNotFoundError):

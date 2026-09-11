@@ -98,23 +98,7 @@ class LLMClient:
             # return the raw text exactly as the model produced it.
             parsed_data = json.loads(content) if parse_json else content
 
-            total_output_tokens = result["usage"]["completion_tokens"]
-            reasoning_tokens = result["usage"]["completion_tokens_details"]["reasoning_tokens"]
-            completion_tokens = total_output_tokens - reasoning_tokens
-
-            usage_metadata = {
-                "total_tokens": result["usage"]["total_tokens"],
-                "prompt_tokens": result["usage"]["prompt_tokens"],
-                "reasoning_tokens": reasoning_tokens,
-                "completion_tokens": completion_tokens,
-                "total_output_tokens": total_output_tokens,
-                "cost": result["usage"]["cost"],
-            }
-
-
-            run["reasoning"] = result["choices"][0]["message"]["reasoning"]
-            run["content"] = parsed_data
-            run["usage_metadata"] = usage_metadata
+            run.update(self._build_run_data(result, parsed_data))
 
             return parsed_data
 
@@ -136,3 +120,26 @@ class LLMClient:
         ).resolve()
 
         return prompt_path.read_text(encoding="utf-8")
+
+    @staticmethod
+    def _build_run_data(result: dict[str, Any], parsed_data: Any) -> dict[str, Any]:
+        message = result["choices"][0]["message"]
+        usage = result.get("usage", {})
+
+        total_output_tokens = usage.get("completion_tokens", 0)
+        reasoning_tokens = (
+            usage.get("completion_tokens_details", {}).get("reasoning_tokens", 0)
+        )
+
+        return {
+            "reasoning": message.get("reasoning"),
+            "content": parsed_data,
+            "usage_metadata": {
+                "total_tokens": usage.get("total_tokens"),
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "reasoning_tokens": reasoning_tokens,
+                "completion_tokens": total_output_tokens - reasoning_tokens,
+                "total_output_tokens": total_output_tokens,
+                "cost": usage.get("cost"),
+            },
+        }
