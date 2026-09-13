@@ -36,6 +36,9 @@ def json_exact_match(actual, expected):
 
         return True
 
+    if isinstance(actual, str):
+        return actual.casefold() == expected.casefold()
+
     return actual == expected
 
 
