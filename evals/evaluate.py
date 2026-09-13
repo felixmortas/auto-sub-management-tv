@@ -1,16 +1,23 @@
 def json_exact_match(actual, expected):
-    """Compare JSON values while ignoring dictionary and list ordering."""
+    """Compare JSON values while ignoring case, dictionary ordering and list ordering."""
 
     if type(actual) is not type(expected):
         return False
 
     if isinstance(actual, dict):
-        if set(actual.keys()) != set(expected.keys()):
+        # Normalise les clés sans tenir compte de la casse.
+        actual_normalized = {key.lower(): value for key, value in actual.items()}
+        expected_normalized = {key.lower(): value for key, value in expected.items()}
+
+        if actual_normalized.keys() != expected_normalized.keys():
             return False
 
         return all(
-            json_exact_match(actual[key], expected[key])
-            for key in actual
+            json_exact_match(
+                actual_normalized[key],
+                expected_normalized[key],
+            )
+            for key in actual_normalized
         )
 
     if isinstance(actual, list):
@@ -38,6 +45,6 @@ def perform_eval(run, example):
     return {
         "exact_match": json_exact_match(
             run["outputs"],
-            example["outputs"]
+            example["outputs"],
         )
     }
