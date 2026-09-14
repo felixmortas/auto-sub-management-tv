@@ -1,5 +1,9 @@
 
+import logging
+
 from core.judge import Judge
+
+logger = logging.getLogger(__name__)
 
 
 class EnrollmentLogic:
@@ -20,6 +24,13 @@ class EnrollmentLogic:
         date = member_data['date']
         year = member_data['year']
         last_year = str(int(year) - 1)
+
+        # A plot-only payment may complete an enrollment already recorded this year.
+        if self._is_plot_only_enrollment(member_data):
+            current_member = self._find_member_in_sheet(member_data, year)
+            if current_member:
+                self._complete_current_enrollment(member_data, current_member, year)
+                return
 
         # 1. Search for existing member data
         old_data = self._find_previous_member(member_data, last_year)
@@ -61,12 +72,19 @@ class EnrollmentLogic:
         Searches for the member in the previous year's records.
         Prioritizes email search, falls back to LLM-based name matching.
         """
-        if member_data.get('email'):
-            return self.excel.find_member_in_sheet(last_year, email=member_data['email'])
+        return self._find_member_in_sheet(member_data, last_year)
 
-        # Fallback: search by name using LLM to handle typos
+    def _find_member_in_sheet(self, member_data: dict, year: str) -> list | None:
+        """Find a member by email, then fall back to LLM-assisted name matching."""
+        email = member_data.get('email')
+        if email:
+            member = self.excel.find_member_in_sheet(year, email=email)
+            if member:
+                return member
+
+        # Fall back to name matching when the payment does not include an email.
         full_name = f"{member_data['first_name']} {member_data['last_name']}"
-        members_names = self.excel.list_members_in_sheet(last_year)
+        members_names = self.excel.list_members_in_sheet(year)
         judge_response = Judge.check_names(
             full_name, 
             members_names, 
@@ -75,9 +93,69 @@ class EnrollmentLogic:
         
         if judge_response.get('similarity_found'):
             last_name = judge_response.get('last_name')
-            return self.excel.find_member_in_sheet(last_year, last_name=last_name)
+            return self.excel.find_member_in_sheet(year, last_name=last_name)
             
         return None
+
+    @staticmethod
+    def _is_plot_only_enrollment(member_data: dict) -> bool:
+        """Return whether the payment contains a plot but no membership type."""
+        return bool(member_data.get('has_plot')) and not member_data.get('membership_type')
+
+    def _complete_current_enrollment(
+        self,
+        member_data: dict,
+        current_member: list,
+        year: str,
+    ) -> None:
+        """Add a plot to an existing current-year member without altering other fields."""
+        if len(current_member) > 5 and current_member[5]:
+            logger.info("Member already has plot %s in sheet %s", current_member[5], year)
+            return
+
+        try:
+            plot_number, row_index = self.excel.get_free_plot()
+        except Exception:
+            logger.exception("Unable to find a free plot for the current enrollment completion")
+            return
+        if not plot_number:
+            logger.warning("No free plot is available for the current enrollment completion")
+            return
+
+        email = current_member[10] if len(current_member) > 10 else member_data.get('email', '')
+        matched_email = member_data.get('email') if member_data.get('email') == email else None
+        try:
+            self.excel.assign_plot(plot_number, row_index, email)
+            was_updated = self.excel.update_member_plot(
+                year,
+                plot_number,
+                member_data['date'],
+                email=matched_email,
+                last_name=current_member[0],
+            )
+        except Exception:
+            logger.exception("Unable to complete the plot enrollment in sheet %s", year)
+            self._release_plot(plot_number)
+            return
+
+        if not was_updated:
+            logger.error("Unable to update the member row in sheet %s; releasing plot %s", year, plot_number)
+            self._release_plot(plot_number)
+            return
+
+        self._send_plot_notification(
+            first_name=current_member[1],
+            phone=current_member[8] if len(current_member) > 8 else '',
+            email=email,
+            plot_number=plot_number,
+        )
+
+    def _release_plot(self, plot_number: str) -> None:
+        """Release a plot after a failed enrollment completion attempt."""
+        try:
+            self.excel.remove_plot(plot_number)
+        except Exception:
+            logger.exception("Unable to release plot %s after a failed enrollment completion", plot_number)
 
     def _resolve_member_info(self, member_data: dict, old_data: list | None) -> dict:
         """
@@ -89,12 +167,12 @@ class EnrollmentLogic:
             old_members = old_data[3]
 
             # Resolve membership type and family members dynamically
-            if member_data['membership_type'] == old_membership_type:
+            if member_data.get('membership_type') == old_membership_type:
                 membership_type = old_membership_type
                 members = old_members if membership_type == 'Familiale' else ""
             else:
-                membership_type = member_data['membership_type']
-                members = member_data['members'] if membership_type == "Familiale" else ""
+                membership_type = member_data.get('membership_type', '')
+                members = member_data.get('members', '') if membership_type == "Familiale" else ""
 
             return {
                 'last_name': old_data[0],
@@ -108,12 +186,12 @@ class EnrollmentLogic:
             }
             
         # If no old data exists, initialize from new member data
-        membership_type = member_data['membership_type']
+        membership_type = member_data.get('membership_type', '')
         return {
             'last_name': member_data['last_name'],
             'first_name': member_data['first_name'],
             'membership_type': membership_type,
-            'members': member_data['members'] if membership_type == "Familiale" else "",
+            'members': member_data.get('members', '') if membership_type == "Familiale" else "",
             'phone_1': "",
             'phone_2': "",
             'email_1': member_data['email'],
@@ -177,9 +255,16 @@ class EnrollmentLogic:
         if self.whatsapp_service and phone:
             # self.whatsapp_serce.send_new_sub_notification(phone, first_name)
             if is_new_plot:
-                self.whatsapp_service.send_plot_notification(phone, first_name, plot_number)
+                self._send_plot_notification(first_name, phone, email, plot_number)
                 
         elif self.outlook_service and email:
             self.outlook_service.send_new_sub_notification(email, first_name)
             if is_new_plot:
-                self.outlook_service.send_plot_notification(email, first_name, plot_number)
+                self._send_plot_notification(first_name, phone, email, plot_number)
+
+    def _send_plot_notification(self, first_name: str, phone: str, email: str, plot_number: str) -> None:
+        """Send only the plot notification through the preferred available channel."""
+        if self.whatsapp_service and phone:
+            self.whatsapp_service.send_plot_notification(phone, first_name, plot_number)
+        elif self.outlook_service and email:
+            self.outlook_service.send_plot_notification(email, first_name, plot_number)

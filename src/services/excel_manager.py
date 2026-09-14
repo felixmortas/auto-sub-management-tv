@@ -114,3 +114,32 @@ class ExcelManager:
                 sheet_name,
                 exc_info=True,
             )
+
+    def update_member_plot(self, sheet_name, plot_number, attribution_date, email=None, last_name=None):
+        """Update only the plot number and attribution date for an existing member."""
+        try:
+            worksheet = self.sh.worksheet(sheet_name)
+            if email:
+                cell = worksheet.find(email, in_column=11)
+            elif last_name:
+                cell = worksheet.find(last_name, in_column=1)
+            else:
+                logger.warning("Cannot update a member plot without an email or last name")
+                return False
+
+            if not cell:
+                logger.warning("Cannot update plot: member was not found in '%s'", sheet_name)
+                return False
+
+            worksheet.update(
+                range_name=f"F{cell.row}:G{cell.row}",
+                values=[[plot_number, attribution_date]],
+            )
+            logger.debug("Updated plot fields for row %s in '%s'", cell.row, sheet_name)
+            return True
+        except gspread.WorksheetNotFound:
+            logger.warning("Cannot update plot: sheet '%s' does not exist", sheet_name)
+            return False
+        except Exception:
+            logger.exception("Unable to update member plot in '%s'", sheet_name)
+            return False
