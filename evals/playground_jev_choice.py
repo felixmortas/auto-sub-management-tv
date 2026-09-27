@@ -3,9 +3,10 @@ import os
 import sys
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
 
+from src.services.jev_client import JevClient
+from src.services.langsmith_tracer import LangSmithTracer
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -22,23 +23,12 @@ DATASET_PATH = Path(
 )
 
 # ---------------------------------------------------------------------------
-# Jev question
+# Initialization
 # ---------------------------------------------------------------------------
 
-INSTRUCTIONS = """# Rôle
-Tu es un expert en réconciliation de données et en analyse d'identité.
-Ton rôle est de déterminer à quel individu présent dans la liste des membres le nom donné correspond, même en cas de légères variations orthographiques ou d'inversion entre le nom et le prénom.
+tracer = LangSmithTracer(api_key=os.environ.get("LANGSMITH_API_KEY"), project=os.environ.get("LANGSMITH_PROJECT"))
 
-# Tâche
-Associe le "Nom complet à comparer" avec un élément de la liste des "Noms des membres de l'année précédente".
-
-# Règles de correspondance
-- Identité stricte : Le nom est exactement le même.
-- Inversion : Le prénom et le nom sont inversés (ex: "Jean Dupont" vs "Dupont Jean").
-- Similitude forte : Il existe une faute de frappe mineure, mais l'identité ne fait aucun doute (ex: "Marie Marange" vs "Maria Maranje").
-- Composés : Gestion des traits d'union, des accents ou des noms composés (ex: "Marie-Pierre" vs "Marie Pierre").
-"""
-
+client = JevClient(model=AI_GATEWAY_MODEL, url=AI_GATEWAY_URL, api_key=AI_GATEWAY_API_KEY, tracer=tracer)
 
 # ---------------------------------------------------------------------------
 # Dataset
@@ -69,68 +59,6 @@ def load_example(example_id: str) -> dict:
         f"dans {DATASET_PATH}"
     )
 
-
-# ---------------------------------------------------------------------------
-# Build Jev request
-# ---------------------------------------------------------------------------
-
-def build_request(example: dict) -> dict:
-    inputs = example["inputs"]
-
-    full_name = inputs["full_name"]
-    members_names = inputs["members_names"]
-
-    # The choice criteria use stable identifiers rather than the names
-    # themselves. This avoids problems if a name contains special characters.
-    criteria = {
-        f"member_{index}": member_name
-        for index, member_name in enumerate(members_names)
-    }
-
-    return {
-        "model": AI_GATEWAY_MODEL,
-        "state": full_name,
-        "questions": {
-            "which_is_correct": {
-                "type": "choice",
-                "instructions": INSTRUCTIONS,
-                "criteria": criteria,
-            }
-        },
-    }
-
-
-# ---------------------------------------------------------------------------
-# Call Jev
-# ---------------------------------------------------------------------------
-
-def call_jev(payload: dict) -> dict:
-    headers = {
-        "Authorization": f"Bearer {AI_GATEWAY_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    response = requests.post(
-        AI_GATEWAY_URL,
-        headers=headers,
-        json=payload,
-        timeout=120,
-    )
-
-    # En cas d'erreur, afficher le corps retourné par Vercel.
-    # C'est beaucoup plus utile qu'un simple "400 Bad Request".
-    if not response.ok:
-        print("\n" + "=" * 80)
-        print("JEV ERROR")
-        print("=" * 80)
-        print(f"HTTP status: {response.status_code}")
-        print(response.text)
-
-        response.raise_for_status()
-
-    return response.json()
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -149,74 +77,37 @@ def main() -> None:
     example_id = sys.argv[1]
 
     example = load_example(example_id)
-    payload = build_request(example)
-
-    print("=" * 80)
-    print(f"Dataset example: {example_id}")
-    print("=" * 80)
-
-    print("\nExpected:")
-    print(
-        json.dumps(
-            example.get("expected"),
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
+    inputs = example["inputs"]
 
     print("\n" + "=" * 80)
     print("REQUEST")
     print("=" * 80)
 
-    print(
-        json.dumps(
-            payload,
-            ensure_ascii=False,
-            indent=2,
-        )
+    print(f"Full name : {inputs['full_name']}")
+    print("Members   :")
+    for i, name in enumerate(inputs["members_names"], 1):
+        print(f"  {i:2}. {name}")
+
+    result = client.ask_choice(
+        "names_similarity_judge_choice.md",
+        full_name=inputs["full_name"],
+        members_names=inputs["members_names"],
     )
 
-    print("\n" + "=" * 80)
-    print("CALLING JEV")
-    print("=" * 80)
-
-    print(f"URL   : {AI_GATEWAY_URL}")
-    print(f"Model : {AI_GATEWAY_MODEL}")
-
-    result = call_jev(payload)
-
-    print("\n" + "=" * 80)
-    print("JEV RESPONSE")
-    print("=" * 80)
-
-    print(
-        json.dumps(
-            result,
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
-
-    # Affichage pratique de la réponse de la question.
-    answer = (
-        result
-        .get("answers", {})
-        .get("which_is_correct")
-    )
-
-    if answer is not None:
+    if result is not None:
         print("\n" + "=" * 80)
-        print("ANSWER")
+        print("RESULT")
         print("=" * 80)
 
-        print(
-            json.dumps(
-                answer,
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        print(f"Choice      : {result.choice}")
+        print(f"Confidence  : {result.confidence}")
 
+        print("\nProbabilities:")
+        print(f"  {'Name':<35} {'Probability':>11}")
+        print(f"  {'-' * 35} {'-' * 11}")
+
+        for name, probability in result.probabilities.items():
+            print(f"  {name:<35} {probability:>11.0%}")
 
 if __name__ == "__main__":
     main()

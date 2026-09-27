@@ -3,9 +3,10 @@ import os
 import sys
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
 
+from src.services.jev_client import JevClient
+from src.services.langsmith_tracer import LangSmithTracer
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -21,25 +22,13 @@ DATASET_PATH = Path(
     "evals/datasets/names_similarity_judge.jsonl"
 )
 
-
 # ---------------------------------------------------------------------------
-# Jev question
+# Initialization
 # ---------------------------------------------------------------------------
 
-INSTRUCTIONS = """# Rôle
-Tu es un expert en réconciliation de données et en analyse d'identité.
-Ton rôle est de déterminer si un nom donné correspond à un individu présent dans une liste de membres, même en cas de légères variations orthographiques ou d'inversion entre le nom et le prénom.
+tracer = LangSmithTracer(api_key=os.environ.get("LANGSMITH_API_KEY"), project=os.environ.get("LANGSMITH_PROJECT"))
 
-# Tâche
-Compare le "Nom complet à comparer" avec la liste des "Noms des membres de l'année précédente" et indique si tu trouves une correspondance.
-
-# Règles de correspondance
-- Identité stricte : Le nom est exactement le même.
-- Inversion : Le prénom et le nom sont inversés (ex: "Jean Dupont" vs "Dupont Jean").
-- Similitude forte : Il existe une faute de frappe mineure, mais l'identité ne fait aucun doute (ex: "Marie Marange" vs "Maria Maranje").
-- Composés : Gestion des traits d'union, des accents ou des noms composés (ex: "Marie-Pierre" vs "Marie Pierre").
-"""
-
+client = JevClient(model=AI_GATEWAY_MODEL, url=AI_GATEWAY_URL, api_key=AI_GATEWAY_API_KEY, tracer=tracer)
 
 # ---------------------------------------------------------------------------
 # Dataset
@@ -70,62 +59,6 @@ def load_example(example_id: str) -> dict:
         f"dans {DATASET_PATH}"
     )
 
-
-# ---------------------------------------------------------------------------
-# Build Jev request
-# ---------------------------------------------------------------------------
-
-def build_request(example: dict) -> dict:
-    inputs = example["inputs"]
-
-    state = {
-        "Nom complet à comparer": inputs["full_name"],
-        "Noms des membres de l'année précédente": inputs["members_names"],
-    }
-
-    return {
-        "model": AI_GATEWAY_MODEL,
-        "state": state,
-        "questions": {
-            "is_name_similar": {
-                "type": "boolean",
-                "instructions": INSTRUCTIONS,
-            }
-        },
-    }
-
-
-# ---------------------------------------------------------------------------
-# Call Jev
-# ---------------------------------------------------------------------------
-
-def call_jev(payload: dict) -> dict:
-    headers = {
-        "Authorization": f"Bearer {AI_GATEWAY_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    response = requests.post(
-        AI_GATEWAY_URL,
-        headers=headers,
-        json=payload,
-        timeout=120,
-    )
-
-    # En cas d'erreur, afficher le corps retourné par Vercel.
-    # C'est beaucoup plus utile qu'un simple "400 Bad Request".
-    if not response.ok:
-        print("\n" + "=" * 80)
-        print("JEV ERROR")
-        print("=" * 80)
-        print(f"HTTP status: {response.status_code}")
-        print(response.text)
-
-        response.raise_for_status()
-
-    return response.json()
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -143,73 +76,27 @@ def main() -> None:
     example_id = sys.argv[1]
 
     example = load_example(example_id)
-    payload = build_request(example)
-
-    print("=" * 80)
-    print(f"Dataset example: {example_id}")
-    print("=" * 80)
-
-    print("\nExpected:")
-    print(
-        json.dumps(
-            example.get("expected"),
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
+    inputs = example["inputs"]
+    state = {
+        "Nom complet à comparer": inputs["full_name"],
+        "Noms des membres de l'année précédente": inputs["members_names"],
+    }
 
     print("\n" + "=" * 80)
     print("REQUEST")
     print("=" * 80)
 
-    print(
-        json.dumps(
-            payload,
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
+    for key, value in state.items():
+        print(f"{key:<20}: {value}")
 
-    print("\n" + "=" * 80)
-    print("CALLING JEV")
-    print("=" * 80)
-
-    print(f"URL   : {AI_GATEWAY_URL}")
-    print(f"Model : {AI_GATEWAY_MODEL}")
-
-    result = call_jev(payload)
-
-    print("\n" + "=" * 80)
-    print("JEV RESPONSE")
-    print("=" * 80)
-
-    print(
-        json.dumps(
-            result,
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
-
-    # Affichage pratique de la réponse de la question.
-    answer = (
-        result
-        .get("answers", {})
-        .get("is_name_similar")
-    )
+    answer = client.ask_boolean("names_similarity_judge_noul.md", state)
 
     if answer is not None:
         print("\n" + "=" * 80)
         print("ANSWER")
         print("=" * 80)
 
-        print(
-            json.dumps(
-                answer,
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        print(f"Result : {answer}")
 
 
 if __name__ == "__main__":
