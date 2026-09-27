@@ -375,9 +375,8 @@ class TestJevClientCallErrors:
         a bare status code when debugging a new/evolving API."""
         mock_post.return_value = make_http_response(status_code=422, text="Unprocessable entity detail")
 
-        with caplog.at_level("ERROR"):
-            with pytest.raises(requests.HTTPError):
-                jev_client.ask_boolean(system_prompt_filename="dummy_prompt.md", state={})
+        with caplog.at_level("ERROR"), pytest.raises(requests.HTTPError):
+            jev_client.ask_boolean(system_prompt_filename="dummy_prompt.md", state={})
 
         assert "Unprocessable entity detail" in caplog.text
 
