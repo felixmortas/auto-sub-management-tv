@@ -21,31 +21,22 @@ DATASET_PATH = Path(
     "evals/datasets/names_similarity_judge.jsonl"
 )
 
-
 # ---------------------------------------------------------------------------
 # Jev question
 # ---------------------------------------------------------------------------
 
 INSTRUCTIONS = """# Rôle
 Tu es un expert en réconciliation de données et en analyse d'identité.
-
-Ton rôle est de déterminer si un nom donné correspond à un individu présent
-dans une liste de membres, même en cas de légères variations orthographiques
-ou d'inversion entre le nom et le prénom.
+Ton rôle est de déterminer à quel individu présent dans la liste des membres le nom donné correspond, même en cas de légères variations orthographiques ou d'inversion entre le nom et le prénom.
 
 # Tâche
-Compare le "Nom complet à comparer" avec la liste des "Noms des membres de
-l'année précédente" et indique si tu trouves une correspondance.
+Associe le "Nom complet à comparer" avec un élément de la liste des "Noms des membres de l'année précédente".
 
 # Règles de correspondance
 - Identité stricte : Le nom est exactement le même.
-- Inversion : Le prénom et le nom sont inversés
-  (ex: "Jean Dupont" vs "Dupont Jean").
-- Similitude forte : Il existe une faute de frappe mineure, mais l'identité
-  ne fait aucun doute
-  (ex: "Marie Marange" vs "Maria Maranje").
-- Composés : Gestion des traits d'union, des accents ou des noms composés
-  (ex: "Marie-Pierre" vs "Marie Pierre").
+- Inversion : Le prénom et le nom sont inversés (ex: "Jean Dupont" vs "Dupont Jean").
+- Similitude forte : Il existe une faute de frappe mineure, mais l'identité ne fait aucun doute (ex: "Marie Marange" vs "Maria Maranje").
+- Composés : Gestion des traits d'union, des accents ou des noms composés (ex: "Marie-Pierre" vs "Marie Pierre").
 """
 
 
@@ -86,18 +77,24 @@ def load_example(example_id: str) -> dict:
 def build_request(example: dict) -> dict:
     inputs = example["inputs"]
 
-    state = {
-        "Nom complet à comparer": inputs["full_name"],
-        "Noms des membres de l'année précédente": inputs["members_names"],
+    full_name = inputs["full_name"]
+    members_names = inputs["members_names"]
+
+    # The choice criteria use stable identifiers rather than the names
+    # themselves. This avoids problems if a name contains special characters.
+    criteria = {
+        f"member_{index}": member_name
+        for index, member_name in enumerate(members_names)
     }
 
     return {
         "model": AI_GATEWAY_MODEL,
-        "state": state,
+        "state": full_name,
         "questions": {
-            "is_name_similar": {
-                "type": "boolean",
+            "which_is_correct": {
+                "type": "choice",
                 "instructions": INSTRUCTIONS,
+                "criteria": criteria,
             }
         },
     }
@@ -141,10 +138,11 @@ def call_jev(payload: dict) -> dict:
 def main() -> None:
     if len(sys.argv) != 2:
         print(
-            "Usage: python -m evals.playground_jev <dataset_example_id>"
+            "Usage: python -m evals.playground_jev_choice "
+            "<dataset_example_id>"
         )
         print(
-            "Exemple: python -m evals.playground_jev 1"
+            "Exemple: python -m evals.playground_jev_choice 1"
         )
         sys.exit(1)
 
@@ -203,7 +201,7 @@ def main() -> None:
     answer = (
         result
         .get("answers", {})
-        .get("is_name_similar")
+        .get("which_is_correct")
     )
 
     if answer is not None:
